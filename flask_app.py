@@ -1,10 +1,9 @@
 import os
 import sys
+
 from flask import Flask, request, jsonify
 from flask_restx import Api, Resource, fields
-
 from openpyxl import load_workbook
-
 
 app = Flask(__name__)
 api = Api(app, version='1.0', title='Diagnosis API', description='A simple API to diagnose animals')
@@ -17,7 +16,7 @@ model = api.model('Diagnose', {
 
 @api.route('/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
-            params={'animal': 'The type of animal to be diagnosed', 'symptoms': 'The symptoms shown by the animal'})
+         params={'animal': 'The type of animal to be diagnosed', 'symptoms': 'The symptoms shown by the animal'})
 @api.expect(model)
 class diagnose(Resource):
     def post(self):
@@ -36,7 +35,6 @@ class diagnose(Resource):
 
         # Get the correct data from the data Excel sheet
         diseases, likelihoods = get_disease_data(animal)
-
 
         # TODO: alter this down the line to take data from an API request so we don't always
         #  have to assume priors are equal
@@ -60,7 +58,7 @@ class diagnose(Resource):
                 posterior = chain_probability * prior_likelihoods[disease]
                 results[disease] = (posterior * 100)
 
-        #Normalise the results
+        # Normalise the results
         normalised_results = normalise(results)
 
         return jsonify({'results': normalised_results})
@@ -75,14 +73,14 @@ def get_disease_data(animal):
     ws = wb[animal]
     # List which stores every given disease
     diseases = []
-    #Populate the list of diseases
+    # Populate the list of diseases
     for row in ws.iter_rows(min_row=2, max_col=1, max_row=ws.max_row):
         for cell in row:
             diseases.append(cell.value)
     # List which stores every given symptom
     symptoms = []
-    #Populate the list of symptoms
-    for col in ws.iter_cols(min_col=2, max_row = 1):
+    # Populate the list of symptoms
+    for col in ws.iter_cols(min_col=2, max_row=1):
         for cell in col:
             symptoms.append(cell.value)
     # Dictionary which stores the likelihoods of each disease
@@ -113,7 +111,7 @@ def normalise(results):
     for r in results:
         value = results[r]
         norm = value / summed_results
-        normalised_results[r] = norm*100
+        normalised_results[r] = norm * 100
     return normalised_results
 
 
