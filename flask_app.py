@@ -1,61 +1,69 @@
 import os
 import sys
 from flask import Flask, request, jsonify
+from flask_restx import Api, Resource, fields
+
 from openpyxl import load_workbook
 
+
 app = Flask(__name__)
+api = Api(app, version='1.0', title='Diagnosis API', description='A simple API to diagnose animals')
+
+model = api.model('Diagnose', {
+    'animal': fields.String(required=True, description='The type of animal'),
+    'symptoms': fields.List(fields.String, required=True, description='The symptoms shown by the animal')
+})
 
 
-@app.route('/')
-def hello_world():
-    return 'Documentation to be detailed here.'
+@api.route('/diagnose/', methods=['POST'])
+@api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
+            params={'animal': 'The type of animal to be diagnosed', 'symptoms': 'The symptoms shown by the animal'})
+@api.expect(model)
+class diagnose(Resource):
+    def post(self):
+        # Get the data from the API request
+        data = request.get_json()
+
+        # Grab the type of animal it is from the API request data
+        animal = data['animal']
+
+        # Grab the list of symptoms from the API request data
+        shown_symptoms = data['symptoms']
+
+        # used to store the values of the Bayes calculation before we zip them together in a dictionary with the names of
+        # diseases
+        results = {}
+
+        # Get the correct data from the data Excel sheet
+        diseases, likelihoods = get_disease_data(animal)
 
 
-@app.route('/diagnose', methods=['POST'])
-def diagnose():
-    # Get the data from the API request
-    data = request.get_json()
+        # TODO: alter this down the line to take data from an API request so we don't always
+        #  have to assume priors are equal
+        # The likelihoods are being populated using equal priors
+        prior_likelihoods = {}
 
-    # Grab the type of animal it is from the API request data
-    animal = data['animal']
+        for disease in diseases:
+            prior_likelihoods[disease] = 100 / len(diseases)
 
-    # Grab the list of symptoms from the API request data
-    shown_symptoms = data['symptoms']
+        for disease in diseases:
+            results[disease] = 0.0
+            chain_probability = 1.0
+            current_likelihoods = likelihoods[disease
+            ]
+            for s in shown_symptoms:
+                presence = shown_symptoms[s]
+                if presence == 1:
+                    chain_probability *= current_likelihoods[s]
+                elif presence == -1:
+                    chain_probability *= (1 - current_likelihoods[s])
+                posterior = chain_probability * prior_likelihoods[disease]
+                results[disease] = (posterior * 100)
 
-    # used to store the values of the Bayes calculation before we zip them together in a dictionary with the names of
-    # diseases
-    results = {}
+        #Normalise the results
+        normalised_results = normalise(results)
 
-    # Get the correct data from the data Excel sheet
-    diseases, likelihoods = get_disease_data(animal)
-
-
-    # TODO: alter this down the line to take data from an API request so we don't always
-    #  have to assume priors are equal
-    # The likelihoods are being populated using equal priors
-    prior_likelihoods = {}
-
-    for disease in diseases:
-        prior_likelihoods[disease] = 100 / len(diseases)
-
-    for disease in diseases:
-        results[disease] = 0.0
-        chain_probability = 1.0
-        current_likelihoods = likelihoods[disease
-        ]
-        for s in shown_symptoms:
-            presence = shown_symptoms[s]
-            if presence == 1:
-                chain_probability *= current_likelihoods[s]
-            elif presence == -1:
-                chain_probability *= (1 - current_likelihoods[s])
-            posterior = chain_probability * prior_likelihoods[disease]
-            results[disease] = (posterior * 100)
-
-    #Normalise the results
-    normalised_results = normalise(results)
-
-    return jsonify({'results': normalised_results})
+        return jsonify({'results': normalised_results})
 
 
 # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
