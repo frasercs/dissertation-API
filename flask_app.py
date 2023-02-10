@@ -6,8 +6,8 @@ from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
 
 app = Flask(__name__)
-api = Api(app, version='1.0', title='Diagnosis API', description='A simple API to diagnose animals using Bayes Theorem', default= 'Diagnosis API', default_label='Diagnosis API')
-
+api = Api(app, version='1.0', title='Diagnosis API', description='A simple API to diagnose animals using Bayes Theorem',
+          default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
     'animal': fields.String(required=True, description='The type of animal'),
@@ -16,7 +16,6 @@ diagnosis_model = api.model('Diagnose', {
 
 
 @api.route('/api/diagnose/', methods=['POST'])
-
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
          params={'animal': 'The type of animal to be diagnosed', 'symptoms': 'The symptoms shown by the animal'})
 @api.expect(diagnosis_model)
@@ -52,8 +51,7 @@ class diagnose(Resource):
         for disease in diseases:
             results[disease] = 0.0
             chain_probability = 1.0
-            current_likelihoods = likelihoods[disease
-            ]
+            current_likelihoods = likelihoods[disease]
             for s in shown_symptoms:
                 presence = shown_symptoms[s]
                 if presence == 1:
@@ -68,8 +66,8 @@ class diagnose(Resource):
 
         return jsonify({'results': normalised_results})
 
-@api.route('/api/data/<string:animal>')
 
+@api.route('/api/data/<string:animal>')
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
 class diagnosis_data(Resource):
     def get(self, animal):
@@ -87,8 +85,8 @@ class diagnosis_data(Resource):
 
         return jsonify({'possible diseases': diseases, 'required symptoms': symptoms, 'likelihoods': likelihoods})
 
-@api.route('/api/matrix/<string:animal>')
 
+@api.route('/api/matrix/<string:animal>')
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
 class disease_symptom_matrix(Resource):
     def get(self, animal):
