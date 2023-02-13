@@ -17,7 +17,7 @@ diagnosis_model = api.model('Diagnose', {
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
-         params={'animal': 'The type of animal to be diagnosed', 'symptoms': 'The symptoms shown by the animal'})
+         params={'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals', 'symptoms': 'The symptoms shown by the animal '})
 @api.expect(diagnosis_model)
 class diagnose(Resource):
     def post(self):
@@ -94,6 +94,19 @@ class disease_symptom_matrix(Resource):
         data = get_likelihood_data(animal)
         return jsonify(data)
 
+@api.route('/api/data/animals')
+@api.doc(responses={200: 'OK'})
+class get_animals(Resource):
+    def get(self):
+        workbook = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
+        names = workbook.sheetnames
+        return jsonify(names)
+
+@api.route('/api/symptoms/<string:animal>')
+@api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
+class get_animal_symptoms(Resource):
+    def get(self, animal):
+        return jsonify(get_symptoms(animal))
 
 # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
 def get_likelihood_data(animal):
