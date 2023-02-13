@@ -6,18 +6,21 @@ from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
 
 app = Flask(__name__)
-api = Api(app, version='1.0', title='Diagnosis API', description='A simple API to diagnose animals using Bayes Theorem',
+api = Api(app, version='1.0', title='Diagnosis API', description='A simple API to diagnose animals using Bayes Theorem.',
           default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
-    'animal': fields.String(required=True, description='The type of animal'),
-    'symptoms': fields.List(fields.String, required=True, description='The symptoms shown by the animal')
+    'animal': fields.String(required=True, description='The type of animal.', example='Cattle'),
+    'symptoms': fields.List(fields.String, required=True, description='The symptoms shown by the animal.', example={
+        "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0, "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
 })
 
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
-         params={'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals', 'symptoms': 'The symptoms shown by the animal '})
+         params={
+             'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals.',
+             'symptoms': 'The symptoms shown by the animal. All symptoms detailed in /api/data/<animal> must be included. The data must be formatted as a JSON list of strings. The strings must be the names of the symptoms as returned by /api/data/<animal> with the value being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not observed, but may still be present, and -1 means the symptom is not present.'})
 @api.expect(diagnosis_model)
 class diagnose(Resource):
     def post(self):
@@ -30,12 +33,13 @@ class diagnose(Resource):
         # Grab the list of symptoms from the API request data
         shown_symptoms = data['symptoms']
 
-        # used to store the values of the Bayes calculation before we zip them together in a dictionary with the names of
-        # diseases
+        # used to store the values of the Bayes calculation for each disease
         results = {}
 
         # Get the correct data from the data Excel sheet
         likelihoods = get_likelihood_data(animal)
+        if likelihoods == -1:
+            return jsonify({'error': 'Invalid animal'})
 
         # Get the list of diseases
         diseases = get_diseases(animal)
@@ -68,54 +72,67 @@ class diagnose(Resource):
 
 
 @api.route('/api/data/<string:animal>')
-@api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
+@api.doc(example = 'Goat', required = True, responses={200: 'OK', 400: 'Invalid Argument'}, params={'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals'})
+
 class diagnosis_data(Resource):
     def get(self, animal):
-        # Load the correct Excel sheet
         ws = load_spreadsheet(animal)
-
-        # Get the correct data from the data Excel sheet
-        likelihoods = get_likelihood_data(animal)
+        # Load the correct Excel sheet
+        if load_spreadsheet(animal) == -1:
+            return jsonify({'error': 'Invalid animal'})
 
         # Get the list of diseases
         diseases = get_diseases(animal)
 
-        # Get the list of symptoms
+        # Get the list of symptoms for the given animal
         symptoms = get_symptoms(animal)
 
-        return jsonify({'possible diseases': diseases, 'required symptoms': symptoms, 'likelihoods': likelihoods})
+        return jsonify({'possible diseases': diseases, 'required symptoms': symptoms})
 
 
 @api.route('/api/matrix/<string:animal>')
-@api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
+@api.hide
+
 class disease_symptom_matrix(Resource):
     def get(self, animal):
-        # Load the correct Excel sheet
         data = get_likelihood_data(animal)
+        if data == -1:
+            return jsonify({'error': 'Invalid animal'})
         return jsonify(data)
 
-@api.route('/api/data/animals')
-@api.doc(responses={200: 'OK'})
+
+@api.route('/api/data/valid_animals')
+@api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
 class get_animals(Resource):
     def get(self):
         workbook = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
         names = workbook.sheetnames
+        names.remove('Sheep vs Goat')
+        names.remove('Abbr')
         return jsonify(names)
 
+
 @api.route('/api/symptoms/<string:animal>')
-@api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
+@api.doc(required = True, responses={200: 'OK', 400: 'Invalid Argument'}, params={'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals.'})
 class get_animal_symptoms(Resource):
     def get(self, animal):
+        if load_spreadsheet(animal) == -1:
+            return jsonify({'error': 'Invalid animal'})
         return jsonify(get_symptoms(animal))
+
 
 # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
 def get_likelihood_data(animal):
     # Load the correct Excel sheet
     ws = load_spreadsheet(animal)
+    if ws == -1:
+        return -1
 
     # Get the list of symptoms and diseases
     symptoms = get_symptoms(animal)
     diseases = get_diseases(animal)
+    if symptoms == -1 or diseases == -1:
+        return -1
 
     # Dictionary which stores the likelihoods of each disease
     likelihoods = {}
@@ -150,6 +167,8 @@ def get_diseases(animal):
     # List which stores every given disease
     diseases = []
     ws = load_spreadsheet(animal)
+    if ws == -1:
+        return -1
     # Populate the list of diseases
     for row in ws.iter_rows(min_row=2, max_col=1, max_row=ws.max_row):
         for cell in row:
@@ -161,6 +180,8 @@ def get_symptoms(animal):
     # List which stores every given symptom
     symptoms = []
     ws = load_spreadsheet(animal)
+    if ws == -1:
+        return -1
     # Populate the list of symptoms
     for col in ws.iter_cols(min_col=2, max_row=1):
         for cell in col:
@@ -170,7 +191,10 @@ def get_symptoms(animal):
 
 def load_spreadsheet(animal):
     workbook = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
-    return workbook[animal]
+    if animal in workbook.sheetnames:
+        return workbook[animal]
+    else:
+        return -1
 
 
 # A function used to normalise the outputs of the bayes calculation
