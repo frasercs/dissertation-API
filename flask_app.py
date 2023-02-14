@@ -6,21 +6,23 @@ from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
 
 app = Flask(__name__)
-api = Api(app, version='1.0', title='Diagnosis API', description='A simple API to diagnose animals using Bayes Theorem.',
+api = Api(app, version='0.1', title='Diagnosis API',
+          description='A simple API to diagnose animals using Bayes Theorem. The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey.',
           default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
-    'animal': fields.String(required=True, description='The type of animal.', example='Cattle'),
-    'symptoms': fields.List(fields.String, required=True, description='The symptoms shown by the animal.', example={
-        "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0, "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
+    'animal': fields.String(required=True, description='The type of animal. As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.', example='Cattle'),
+    'symptoms': fields.List(fields.String, required=True, description='The symptoms shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}', example={
+        "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0, "Icter": 0, "Lymph": -1,
+        "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
 })
 
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
          params={
-             'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals.',
-             'symptoms': 'The symptoms shown by the animal. All symptoms detailed in /api/data/<animal> must be included. The data must be formatted as a JSON list of strings. The strings must be the names of the symptoms as returned by /api/data/<animal> with the value being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not observed, but may still be present, and -1 means the symptom is not present.'})
+             'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey.',
+             'symptoms': 'The symptoms shown by the animal. All symptoms detailed in /api/data/<animal> must be included. The data must be formatted as a JSON list of strings. The strings must be the names of the symptoms as returned by /api/data/<animal> with the value being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not observed, but may still be present, and -1 means the symptom is not present. \n \n For example: \n \n \"symptoms\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}'})
 @api.expect(diagnosis_model)
 class diagnose(Resource):
     def post(self):
@@ -72,8 +74,8 @@ class diagnose(Resource):
 
 
 @api.route('/api/data/<string:animal>')
-@api.doc(example = 'Goat', required = True, responses={200: 'OK', 400: 'Invalid Argument'}, params={'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals'})
-
+@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
+    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
 class diagnosis_data(Resource):
     def get(self, animal):
         ws = load_spreadsheet(animal)
@@ -92,7 +94,6 @@ class diagnosis_data(Resource):
 
 @api.route('/api/matrix/<string:animal>')
 @api.hide
-
 class disease_symptom_matrix(Resource):
     def get(self, animal):
         data = get_likelihood_data(animal)
@@ -113,7 +114,8 @@ class get_animals(Resource):
 
 
 @api.route('/api/symptoms/<string:animal>')
-@api.doc(required = True, responses={200: 'OK', 400: 'Invalid Argument'}, params={'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals.'})
+@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
+    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
 class get_animal_symptoms(Resource):
     def get(self, animal):
         if load_spreadsheet(animal) == -1:
