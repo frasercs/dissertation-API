@@ -17,9 +17,7 @@ diagnosis_model = api.model('Diagnose', {
     'symptoms': fields.List(fields.String, required=True,
                             description='The symptoms shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}',
                             example={
-                                "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0,
-                                "Icter": 0, "Lymph": -1,
-                                "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
+                                "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0, "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
 })
 
 
