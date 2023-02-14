@@ -11,10 +11,15 @@ api = Api(app, version='0.1', title='Diagnosis API',
           default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
-    'animal': fields.String(required=True, description='The type of animal. As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.', example='Cattle'),
-    'symptoms': fields.List(fields.String, required=True, description='The symptoms shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}', example={
-        "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0, "Icter": 0, "Lymph": -1,
-        "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
+    'animal': fields.String(required=True,
+                            description='The type of animal. As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
+                            example='Cattle'),
+    'symptoms': fields.List(fields.String, required=True,
+                            description='The symptoms shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}',
+                            example={
+                                "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0,
+                                "Icter": 0, "Lymph": -1,
+                                "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
 })
 
 
