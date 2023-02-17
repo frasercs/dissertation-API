@@ -1,14 +1,18 @@
 import os
 import sys
 
+
 from flask import Flask, request, jsonify
-from flask_restx import Api, Resource, fields
+from flask_restx import Api, Resource, fields, cors
+from flask_cors import CORS
 from openpyxl import load_workbook
 
 app = Flask(__name__)
+CORS(app)
+
 api = Api(app, version='0.1', title='Diagnosis API',
           description='A simple API to diagnose animals using Bayes Theorem. The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey.',
-          default='Diagnosis API', default_label='Diagnosis API')
+          default='Diagnosis API', default_label='Diagnosis API', decorators=[cors.crossdomain(origin="*")])
 
 diagnosis_model = api.model('Diagnose', {
     'animal': fields.String(required=True,
@@ -26,6 +30,8 @@ diagnosis_model = api.model('Diagnose', {
          description='This API endpoint takes a JSON object containing the type of animal and a list of symptoms. It then returns a list of diseases and their likelihood of being the cause of the symptoms. \n \n The JSON object must contain both "animal" and "symptoms". \n \n animal: The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey. \n \n symptoms\': \'All symptoms detailed in /api/symptoms/\'animal\' (where \'animal\' is replaced by a valid string as mentioned before) must be included. The data must be formatted as a JSON list of strings. The value of each symptom being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not observed, but may still be present, and -1 means the symptom is not present. \n \n Example JSON object: \n \n  {\n"animal": "Cattle", \n\"symptoms\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}\n}')
 @api.expect(diagnosis_model)
 class diagnose(Resource):
+    def options(self):
+        return jsonify({'status': 'ok'})
     def post(self):
         # Get the data from the API request
         data = request.get_json()
