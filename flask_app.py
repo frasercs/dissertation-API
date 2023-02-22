@@ -1,11 +1,10 @@
 import os
 import sys
 
-
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
-from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
@@ -18,22 +17,23 @@ diagnosis_model = api.model('Diagnose', {
     'animal': fields.String(required=True,
                             description='The type of animal. As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
                             example='Cattle'),
-    'symptoms': fields.List(fields.String, required=True,
-                            description='The symptoms shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}',
-                            example={
-                                "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0, "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0, "Wght_L": 0})
+    'signs': fields.List(fields.String, required=True,
+                         description='The signs shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}',
+                         example={
+                             "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0,
+                             "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0,
+                             "Wght_L": 0})
 })
 
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
-         description='This API endpoint takes a JSON object containing the type of animal and a list of symptoms. It then returns a list of diseases and their likelihood of being the cause of the symptoms. \n \n The JSON object must contain both "animal" and "symptoms". \n \n animal: The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey. \n \n symptoms\': \'All symptoms detailed in /api/symptoms/\'animal\' (where \'animal\' is replaced by a valid string as mentioned before) must be included. The data must be formatted as a JSON list of strings. The value of each symptom being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not observed, but may still be present, and -1 means the symptom is not present. \n \n Example JSON object: \n \n  {\n"animal": "Cattle", \n\"symptoms\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}\n}')
+         description='This API endpoint takes a JSON object containing the type of animal and a list of signs. It then returns a list of diseases and their likelihood of being the cause of the signs. \n \n The JSON object must contain both "animal" and "signs". \n \n animal: The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey. \n \n signs\': \'All signs detailed in /api/symptoms/\'animal\' (where \'animal\' is replaced by a valid string as mentioned before) must be included. The data must be formatted as a JSON list of strings. The value of each symptom being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not observed, but may still be present, and -1 means the symptom is not present. \n \n Example JSON object: \n \n  {\n"animal": "Cattle", \n\"symptoms\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}\n}')
 @api.expect(diagnosis_model)
 class diagnose(Resource):
 
     def options(self):
         return jsonify({'status': 'ok'})
-
 
     def post(self):
         # Get the data from the API request
@@ -42,8 +42,8 @@ class diagnose(Resource):
         # Grab the type of animal it is from the API request data
         animal = data['animal']
 
-        # Grab the list of symptoms from the API request data
-        shown_symptoms = data['symptoms']
+        # Grab the list of signs from the API request data
+        shown_signs = data['signs']
 
         # used to store the values of the Bayes calculation for each disease
         results = {}
@@ -68,8 +68,8 @@ class diagnose(Resource):
             results[disease] = 0.0
             chain_probability = 1.0
             current_likelihoods = likelihoods[disease]
-            for s in shown_symptoms:
-                presence = shown_symptoms[s]
+            for s in shown_signs:
+                presence = shown_signs[s]
                 if presence == 1:
                     chain_probability *= current_likelihoods[s]
                 elif presence == -1:
@@ -96,15 +96,15 @@ class diagnosis_data(Resource):
         # Get the list of diseases
         diseases = get_diseases(animal)
 
-        # Get the list of symptoms for the given animal
-        symptoms = get_symptoms(animal)
+        # Get the list of signs for the given animal
+        signs = get_signs(animal)
 
-        return jsonify({'possible diseases': diseases, 'required symptoms': symptoms})
+        return jsonify({'possible diseases': diseases, 'required signs': signs})
 
 
 @api.route('/api/matrix/<string:animal>')
 @api.hide
-class disease_symptom_matrix(Resource):
+class disease_sign_matrix(Resource):
     def get(self, animal):
         data = get_likelihood_data(animal)
         if data == -1:
@@ -123,14 +123,14 @@ class get_animals(Resource):
         return jsonify(names)
 
 
-@api.route('/api/symptoms/<string:animal>')
+@api.route('/api/signs/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
     'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
-class get_animal_symptoms(Resource):
+class get_animal_signs(Resource):
     def get(self, animal):
         if load_spreadsheet(animal) == -1:
             return jsonify({'error': 'Invalid animal'})
-        return jsonify(get_symptoms(animal))
+        return jsonify(get_signs(animal))
 
 
 # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
@@ -140,10 +140,10 @@ def get_likelihood_data(animal):
     if ws == -1:
         return -1
 
-    # Get the list of symptoms and diseases
-    symptoms = get_symptoms(animal)
+    # Get the list of signs and diseases
+    signs = get_signs(animal)
     diseases = get_diseases(animal)
-    if symptoms == -1 or diseases == -1:
+    if signs == -1 or diseases == -1:
         return -1
 
     # Dictionary which stores the likelihoods of each disease
@@ -159,16 +159,16 @@ def get_likelihood_data(animal):
             disease_counter = 0
             continue
 
-        # Counter used to keep track of the current symptom
-        symptom_counter = 0
-        # Dictionary which stores the likelihoods of each symptom for the current disease
+        # Counter used to keep track of the current sign
+        sign_counter = 0
+        # Dictionary which stores the likelihoods of each sign for the current disease
         current_disease_likelihoods = {}
 
         # Loop through all cells in each row except the first one as it is the disease name
         for cell in row[1:]:
             chance = cell.value
-            current_disease_likelihoods[symptoms[symptom_counter]] = chance
-            symptom_counter += 1
+            current_disease_likelihoods[signs[sign_counter]] = chance
+            sign_counter += 1
         likelihoods[diseases[disease_counter]] = current_disease_likelihoods
         disease_counter += 1
 
@@ -188,17 +188,17 @@ def get_diseases(animal):
     return diseases
 
 
-def get_symptoms(animal):
-    # List which stores every given symptom
-    symptoms = []
+def get_signs(animal):
+    # List which stores every given sign
+    signs = []
     ws = load_spreadsheet(animal)
     if ws == -1:
         return -1
-    # Populate the list of symptoms
+    # Populate the list of signs
     for col in ws.iter_cols(min_col=2, max_row=1):
         for cell in col:
-            symptoms.append(cell.value)
-    return symptoms
+            signs.append(cell.value)
+    return signs
 
 
 def load_spreadsheet(animal):
