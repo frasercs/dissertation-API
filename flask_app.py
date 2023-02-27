@@ -56,6 +56,8 @@ class diagnose(Resource):
         # Get the list of diseases
         diseases = get_diseases(animal)
 
+        wiki_ids = get_wiki_ids(animal)
+
         # TODO: alter this down the line to take data from an API request so we don't always
         #  have to assume priors are equal
         # The likelihoods are being populated using equal priors
@@ -80,7 +82,7 @@ class diagnose(Resource):
         # Normalise the results
         normalised_results = normalise(results)
 
-        return jsonify({'results': normalised_results})
+        return jsonify({'results': normalised_results, 'wiki ids': wiki_ids})
 
 
 @api.route('/api/data/<string:animal>')
@@ -124,13 +126,30 @@ class get_animals(Resource):
 
 
 @api.route('/api/signs/<string:animal>')
-@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
+@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, description = "This endpoint returns a list of signs required to diagnose the animal.", params={
     'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
 class get_animal_signs(Resource):
     def get(self, animal):
         if load_spreadsheet(animal) == -1:
             return jsonify({'error': 'Invalid animal'})
         return jsonify(get_signs(animal))
+
+@api.route('/api/full_sign_info/<string:animal>')
+@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, description = "This endpoint returns a dictionary which contains the full medical terminology of each sign as well as the WikiData ID (if there is one).", params={
+    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
+class get_full_name_and_code(Resource):
+    def get(self, animal):
+        if load_spreadsheet(animal + '_Abbr') == -1:
+            return jsonify({'error': 'Invalid animal'})
+        return jsonify({'full names and codes': get_sign_names_and_codes(animal)})
+
+def get_wiki_ids(animal):
+    wiki_ids = {}
+    for disease in get_diseases(animal):
+        for row in load_spreadsheet('Disease_Codes').rows:
+            if row[0].value == disease:
+                wiki_ids[disease] = row[1].value
+    return  wiki_ids
 
 
 # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
@@ -191,14 +210,30 @@ def get_diseases(animal):
 def get_signs(animal):
     # List which stores every given sign
     signs = []
-    ws = load_spreadsheet(animal)
-    if ws == -1:
+    ws_signs = load_spreadsheet(animal)
+    if ws_signs == -1:
         return -1
     # Populate the list of signs
-    for col in ws.iter_cols(min_col=2, max_row=1):
+    for col in ws_signs.iter_cols(min_col=2, max_row=1):
         for cell in col:
             signs.append(cell.value)
     return signs
+
+
+def get_sign_names_and_codes(animal):
+    ws = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))[animal + '_Abbr']
+    full_sign_names_and_codes = {}
+    for row in ws.rows:
+        full_sign_names_and_codes[row[0].value] = [row[1].value, row[2].value]
+    return full_sign_names_and_codes
+
+def get_sign_codes(animal):
+    ws = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))[animal + '_Abbr']
+    codes = {}
+    for row in ws.rows:
+        codes[row[0].value] = row[2].value
+    return codes
+
 
 
 def load_spreadsheet(animal):
