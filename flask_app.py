@@ -5,66 +5,146 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
+from werkzeug.exceptions import BadRequest
 
 app = Flask(__name__)
 CORS(app)
 
 api = Api(app, version='0.1', title='Diagnosis API',
-          description='A simple API to diagnose animals using Bayes Theorem. The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey.',
+          description='A simple API to diagnose animals using Bayes Theorem. The current version only supports '
+                      'Cattle, Sheep, Goat, Camel, Horse and Donkey.',
           default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
     'animal': fields.String(required=True,
-                            description='The type of animal. As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
+                            description='The type of animal. As of version 0.1 this can be \'Cattle\', \'Sheep\', '
+                                        '\'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
                             example='Cattle'),
     'signs': fields.List(fields.String, required=True,
-                         description='The signs shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}',
+                         description='The signs shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, '
+                                     '\"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, '
+                                     '\"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, '
+                                     '\"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}',
                          example={
                              "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0,
                              "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0,
-                             "Wght_L": 0})
+                             "Wght_L": 0}),
+    'priors': fields.List(fields.String, required=False,
+                          description='This field can be used if you wish to specify which diseases are more likely '
+                                      'than others. If left blank, the algorithm will assume all diseases have an '
+                                      'equal chance of occurring. The values given MUST add up to 100. The values '
+                                      'given are the percentage likelihood of each disease occurring. \n \n You must '
+                                      'provide data for every disease. This is the case as without every disease '
+                                      'being considered, the algorithm\'s output will be far less accurate',
+                          example={
+                              "Anthrax": 5,
+                              "Babesiosis": 5,
+                              "Blackleg": 5,
+                              "CBPP": 5,
+                              "Colibacillosis": 5,
+                              "Cowdriosis": 5,
+                              "FMD": 5,
+                              "Fasciolosis": 5,
+                              "LSD": 5,
+                              "Lungworm": 25,
+                              "Pasteurollosis": 5,
+                              "PGE / GIT parasite": 5,
+                              "Rabies": 5,
+                              "Trypanosomosis": 5,
+                              "Tuberculosis": 5,
+                              "ZZ_Other": 5
+                          })
 })
 
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
-         description='This API endpoint takes a JSON object containing the type of animal and a list of signs. It then returns a list of diseases and their likelihood of being the cause of the signs. \n \n The JSON object must contain both "animal" and "signs". \n \n animal: The current version only supports Cattle, Sheep, Goat, Camel, Horse and Donkey. \n \n signs\': \'All signs detailed in /api/symptoms/\'animal\' (where \'animal\' is replaced by a valid string as mentioned before) must be included. The data must be formatted as a JSON list of strings. The value of each symptom being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not observed, but may still be present, and -1 means the symptom is not present. \n \n Example JSON object: \n \n  {\n"animal": "Cattle", \n\"symptoms\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}\n}')
+         description='This API endpoint takes a JSON object containing the type of animal and a list of signs. It '
+                     'then returns a list of diseases and their likelihood of being the cause of the signs. \n \n The '
+                     'JSON object must contain both "animal" and "signs". \n \n animal: The current version only '
+                     'supports Cattle, Sheep, Goat, Camel, Horse and Donkey. \n \n signs\': \'All signs detailed in '
+                     '/api/symptoms/\'animal\' (where \'animal\' is replaced by a valid string as mentioned before) '
+                     'must be included. The data must be formatted as a JSON list of strings. The value of each '
+                     'symptom being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not '
+                     'observed, but may still be present, and -1 means the symptom is not present. \n \n Example JSON '
+                     'object: \n \n  {\n"animal": "Cattle", \n\"symptoms\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, '
+                     '\"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, '
+                     '\"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}, '
+                     '\n \"priors\": { \"Anthrax\": 5, \"Babesiosis\": 5, \"Blackleg\": 5, \"CBPP\": 5, '
+                     '\"Colibacillosis\": 5, \"Cowdriosis\": 5,\"FMD\": 5,\"Fasciolosis\": 5,\"LSD\": 5,\"Lungworm\": '
+                     '25,\"Pasteurollosis\": 5,\"PGE / GIT parasite\": 5,\"Rabies\": 5,\"Trypanosomosis\": 5,'
+                     '\"Tuberculosis\": 5,\"ZZ_Other\": 5}}\n}')
 @api.expect(diagnosis_model)
 class diagnose(Resource):
 
-    def options(self):
+    @staticmethod
+    def options():
         return jsonify({'status': 'ok'})
 
-    def post(self):
+    @staticmethod
+    def post():
         # Get the data from the API request
         data = request.get_json()
 
         # Grab the type of animal it is from the API request data
         animal = data['animal']
 
-        # Grab the list of signs from the API request data
-        shown_signs = data['signs']
+        # Capitalise the first letter of the animal to ensure input matches syntax used in sheets
+        animal = animal.capitalize()
 
-        # used to store the values of the Bayes calculation for each disease
-        results = {}
+        # Check if the animal is valid
+        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
+                and animal != 'Donkey':
+            # If the animal is invalid, raise an error
+            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
 
         # Get the correct data from the data Excel sheet
         likelihoods = get_likelihood_data(animal)
-        if likelihoods == -1:
-            return jsonify({'error': 'Invalid animal'})
 
         # Get the list of diseases
         diseases = get_diseases(animal)
 
+        # Get the list of wiki ids
         wiki_ids = get_wiki_ids(animal)
 
-        # TODO: alter this down the line to take data from an API request so we don't always
-        #  have to assume priors are equal
-        # The likelihoods are being populated using equal priors
-        prior_likelihoods = {}
+        # Grab the list of signs from the API request data
+        shown_signs = data['signs']
 
-        for disease in diseases:
-            prior_likelihoods[disease] = 100 / len(diseases)
+        # Check if the signs values are all valid
+        for value in shown_signs.values():
+            if value not in [-1, 0, 1]:
+                raise BadRequest('Sign values must be either -1, 0 or 1')
+
+        # Grab the priors from the API request data (if they exist)
+
+        if "priors" in data and data['priors'] is not None:
+            priors = data['priors']
+            provided_keys = []
+            # Check if the priors are valid
+            for key in priors.keys():
+                if key not in diseases:
+                    raise BadRequest('Invalid disease in priors.')
+                provided_keys.append(key)
+            # Check if all diseases have been provided
+            for disease in diseases:
+                if disease not in provided_keys:
+                    raise BadRequest('Missing disease in priors.')
+            # Check if the priors add up to 100
+            total_value = 0
+            for value in priors.values():
+                total_value += value
+            if total_value != 100:
+                raise BadRequest('Priors must add up to 100.')
+            # If the priors are valid, use them
+            prior_likelihoods = priors
+        # If the priors are not provided, use the default priors
+        else:
+            prior_likelihoods = {}
+            for disease in diseases:
+                prior_likelihoods[disease] = 100 / len(diseases)
+
+        # used to store the values of the Bayes calculation for each disease
+        results = {}
 
         for disease in diseases:
             results[disease] = 0.0
@@ -87,13 +167,17 @@ class diagnose(Resource):
 
 @api.route('/api/data/<string:animal>')
 @api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
-    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
-class diagnosis_data(Resource):
-    def get(self, animal):
-        ws = load_spreadsheet(animal)
+    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n '
+              '\n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
+class diagnosisData(Resource):
+    @staticmethod
+    def get(animal):
+        animal = animal.capitalize()
         # Load the correct Excel sheet
-        if load_spreadsheet(animal) == -1:
-            return jsonify({'error': 'Invalid animal'})
+        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
+                and animal != 'Donkey':
+            # If the animal is invalid, raise an error
+            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
 
         # Get the list of diseases
         diseases = get_diseases(animal)
@@ -106,42 +190,75 @@ class diagnosis_data(Resource):
 
 @api.route('/api/matrix/<string:animal>')
 @api.hide
-class disease_sign_matrix(Resource):
-    def get(self, animal):
+class diseaseSignMatrix(Resource):
+    @staticmethod
+    def get(animal):
+        animal = animal.capitalize()
+
+        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
+                and animal != 'Donkey':
+            # If the animal is invalid, raise an error
+            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
+
         data = get_likelihood_data(animal)
-        if data == -1:
-            return jsonify({'error': 'Invalid animal'})
+
         return jsonify(data)
 
 
 @api.route('/api/data/valid_animals')
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
 class get_animals(Resource):
-    def get(self):
+    @staticmethod
+    def get():
         workbook = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
         names = workbook.sheetnames
         names.remove('Sheep vs Goat')
-        names.remove('Abbr')
+        names.remove('Cattle_Abbr')
+        names.remove('Sheep_Abbr')
+        names.remove('Goat_Abbr')
+        names.remove('Camel_Abbr')
+        names.remove('Horse_Abbr')
+        names.remove('Donkey_Abbr')
+        names.remove('Sign_Abbr')
+        names.remove('Disease_Codes')
         return jsonify(names)
 
 
 @api.route('/api/signs/<string:animal>')
-@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, description = "This endpoint returns a list of signs required to diagnose the animal.", params={
-    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
-class get_animal_signs(Resource):
-    def get(self, animal):
-        if load_spreadsheet(animal) == -1:
-            return jsonify({'error': 'Invalid animal'})
+@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
+         description="This endpoint returns a list of signs required to diagnose the animal.", params={
+        'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. '
+                  '\n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or '
+                  '\'Donkey\'.'})
+class getAnimalSigns(Resource):
+    @staticmethod
+    def get(animal):
+        animal = animal.capitalize()
+        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
+                and animal != 'Donkey':
+            # If the animal is invalid, raise an error
+            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
         return jsonify(get_signs(animal))
 
+
 @api.route('/api/full_sign_info/<string:animal>')
-@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, description = "This endpoint returns a dictionary which contains the full medical terminology of each sign as well as the WikiData ID (if there is one).", params={
-    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
-class get_full_name_and_code(Resource):
-    def get(self, animal):
-        if load_spreadsheet(animal + '_Abbr') == -1:
-            return jsonify({'error': 'Invalid animal'})
+@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
+         description="This endpoint returns a dictionary which contains the full medical terminology of each sign as "
+                     "well as the WikiData ID (if there is one).",
+         params={
+             'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by '
+                       '/api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+                       '\'Camel\', \'Horse\' or \'Donkey\'.'})
+class getFullNameAndCode(Resource):
+    @staticmethod
+    def get(animal):
+        animal = animal.capitalize()
+        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
+                and animal != 'Donkey':
+            # If the animal is invalid, raise an error
+            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
         return jsonify({'full names and codes': get_sign_names_and_codes(animal)})
+
 
 def get_wiki_ids(animal):
     wiki_ids = {}
@@ -149,7 +266,7 @@ def get_wiki_ids(animal):
         for row in load_spreadsheet('Disease_Codes').rows:
             if row[0].value == disease:
                 wiki_ids[disease] = row[1].value
-    return  wiki_ids
+    return wiki_ids
 
 
 # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
@@ -227,13 +344,13 @@ def get_sign_names_and_codes(animal):
         full_sign_names_and_codes[row[0].value] = [row[1].value, row[2].value]
     return full_sign_names_and_codes
 
+
 def get_sign_codes(animal):
     ws = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))[animal + '_Abbr']
     codes = {}
     for row in ws.rows:
         codes[row[0].value] = row[2].value
     return codes
-
 
 
 def load_spreadsheet(animal):
