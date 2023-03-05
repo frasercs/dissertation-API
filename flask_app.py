@@ -10,14 +10,14 @@ from werkzeug.exceptions import BadRequest
 app = Flask(__name__)
 CORS(app)
 
-api = Api(app, version='0.1', title='Diagnosis API',
+api = Api(app, version='0.9', title='Diagnosis API',
           description='A simple API to diagnose animals using Bayes Theorem. The current version only supports '
                       'Cattle, Sheep, Goat, Camel, Horse and Donkey.',
           default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
     'animal': fields.String(required=True,
-                            description='The type of animal. As of version 0.1 this can be \'Cattle\', \'Sheep\', '
+                            description='The species of animal. As of version 0.9 this can be \'Cattle\', \'Sheep\', '
                                         '\'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
                             example='Cattle'),
     'signs': fields.List(fields.String, required=True,
@@ -59,7 +59,7 @@ diagnosis_model = api.model('Diagnose', {
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
-         description='This API endpoint takes a JSON object containing the type of animal and a list of signs. It '
+         description='This API endpoint takes a JSON object containing the species of animal and a list of signs. It '
                      'then returns a list of diseases and their likelihood of being the cause of the signs. \n \n The '
                      'JSON object must contain both "animal" and "signs". \n \n animal: The current version only '
                      'supports Cattle, Sheep, Goat, Camel, Horse and Donkey. \n \n signs\': \'All signs detailed in '
@@ -86,7 +86,7 @@ class diagnose(Resource):
         # Get the data from the API request
         data = request.get_json()
 
-        # Grab the type of animal it is from the API request data
+        # Grab the species of animal it is from the API request data
         animal = data['animal']
 
         # Capitalise the first letter of the animal to ensure input matches syntax used in sheets
@@ -166,10 +166,10 @@ class diagnose(Resource):
         return jsonify({'results': normalised_results, 'wiki ids': wiki_ids})
 
 
-@api.route('/api/data/<string:animal>')
+@api.route('/api/data/animal_data?animal=<string:animal>')
 @api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
-    'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n '
-              '\n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
+    'animal': 'The species of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n '
+              '\n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
 class diagnosisData(Resource):
     @staticmethod
     def get(animal):
@@ -189,7 +189,7 @@ class diagnosisData(Resource):
         return jsonify({'diseases': diseases, 'signs': signs})
 
 
-@api.route('/api/matrix/<string:animal>')
+@api.route('/api/matrix?animal=<string:animal>')
 @api.hide
 class diseaseSignMatrix(Resource):
     @staticmethod
@@ -225,11 +225,11 @@ class get_animals(Resource):
         return jsonify(names)
 
 
-@api.route('/api/signs/<string:animal>')
+@api.route('/api/data/signs?animal=<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          description="This endpoint returns a list of signs required to diagnose the animal.", params={
-        'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. '
-                  '\n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or '
+        'animal': 'The species of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals.'
+                  '\n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or '
                   '\'Donkey\'.'})
 class getAnimalSigns(Resource):
     @staticmethod
@@ -242,13 +242,13 @@ class getAnimalSigns(Resource):
         return jsonify(get_signs(animal))
 
 
-@api.route('/api/full_sign_info/<string:animal>')
+@api.route('/api/data/signs_and_codes?animal=<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
-         description="This endpoint returns a dictionary which contains the full medical terminology of each sign as "
+         description="This endpoint returns a dictionary which contains the full medical terminology for each sign as "
                      "well as the WikiData ID (if there is one).",
          params={
-             'animal': 'The type of animal to be diagnosed. This must be a valid animal as returned by '
-                       '/api/data/animals. \n \n As of version 0.1 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+             'animal': 'The species of animal to be diagnosed. This must be a valid animal as returned by '
+                       '/api/data/animals. \n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', '
                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
 class getFullNameAndCode(Resource):
     @staticmethod
@@ -259,6 +259,25 @@ class getFullNameAndCode(Resource):
             # If the animal is invalid, raise an error
             raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
         return jsonify({'full names and codes': get_sign_names_and_codes(animal)})
+
+
+@api.route('/api/data/diseases_and_codes?animal=<string:animal>')
+@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
+         description="This endpoint returns a dictionary which contains the possible diseases for the given animal as "
+                     "well as the WikiData ID (if there is one).",
+         params={
+             'animal': 'The species. This must be a valid animal as returned by '
+                       '/api/data/animals. \n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+                       '\'Camel\', \'Horse\' or \'Donkey\'.'})
+class getDiseaseCodes(Resource):
+    @staticmethod
+    def get(animal):
+        animal = animal.capitalize()
+        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
+                and animal != 'Donkey':
+            # If the animal is invalid, raise an error
+            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
+        return jsonify({'disease_codes': get_wiki_ids(animal)})
 
 
 def get_wiki_ids(animal):
@@ -344,14 +363,6 @@ def get_sign_names_and_codes(animal):
     for row in ws.rows:
         full_sign_names_and_codes[row[0].value] = [row[1].value, row[2].value]
     return full_sign_names_and_codes
-
-
-def get_sign_codes(animal):
-    ws = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))[animal + '_Abbr']
-    codes = {}
-    for row in ws.rows:
-        codes[row[0].value] = row[2].value
-    return codes
 
 
 def load_spreadsheet(animal):
