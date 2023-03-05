@@ -12,7 +12,7 @@ CORS(app)
 
 api = Api(app, version='0.9', title='Diagnosis API',
           description='A simple API to diagnose animals using Bayes Theorem. The current version only supports '
-                      'Cattle, Sheep, Goat, Camel, Horse and Donkey.',
+                      'Cattle, Sheep, Goat, Camel, Horse and Donkey. <style>.models {display: none !important}</style>',
           default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
