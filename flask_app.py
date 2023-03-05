@@ -264,7 +264,7 @@ class getFullNameAndCode(Resource):
                 and animal != 'Donkey':
             # If the animal is invalid, raise an error
             raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
-        return jsonify({'full names and codes': get_sign_names_and_codes(animal)})
+        return jsonify({'full_names_and_codes': get_sign_names_and_codes(animal)})
 
 
 @api.route('/api/data/diseases_and_codes/<string:animal>')
