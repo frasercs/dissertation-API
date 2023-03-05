@@ -166,10 +166,13 @@ class diagnose(Resource):
         return jsonify({'results': normalised_results, 'wiki ids': wiki_ids})
 
 
-@api.route('/api/data/animal_data?animal=<string:animal>')
-@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
-    'animal': 'The species of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals. \n '
-              '\n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'})
+@api.route('/api/data/animal_details/<string:animal>')
+@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'},
+         params={
+    'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid animal as '
+              'returned by /api/data/animals. \n'
+              '\n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'},
+         description='This endpoint returns the list of diseases and signs for the given animal.')
 class diagnosisData(Resource):
     @staticmethod
     def get(animal):
@@ -189,7 +192,7 @@ class diagnosisData(Resource):
         return jsonify({'diseases': diseases, 'signs': signs})
 
 
-@api.route('/api/matrix?animal=<string:animal>')
+@api.route('/api/matrix/<string:animal>')
 @api.hide
 class diseaseSignMatrix(Resource):
     @staticmethod
@@ -207,7 +210,8 @@ class diseaseSignMatrix(Resource):
 
 
 @api.route('/api/data/valid_animals')
-@api.doc(responses={200: 'OK', 400: 'Invalid Argument'})
+@api.doc(responses={200: 'OK', 400: 'Invalid Argument'},
+         description="This endpoint returns a list of valid animals that can be used in the API. \n")
 class get_animals(Resource):
     @staticmethod
     def get():
@@ -225,10 +229,11 @@ class get_animals(Resource):
         return jsonify(names)
 
 
-@api.route('/api/data/signs?animal=<string:animal>')
+@api.route('/api/data/signs/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
-         description="This endpoint returns a list of signs required to diagnose the animal.", params={
-        'animal': 'The species of animal to be diagnosed. This must be a valid animal as returned by /api/data/animals.'
+         description="This endpoint returns a list of signs required to diagnose the given animal.", params={
+        'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as returned '
+                  'by /api/data/animals.'
                   '\n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or '
                   '\'Donkey\'.'})
 class getAnimalSigns(Resource):
@@ -242,12 +247,13 @@ class getAnimalSigns(Resource):
         return jsonify(get_signs(animal))
 
 
-@api.route('/api/data/signs_and_codes?animal=<string:animal>')
+@api.route('/api/data/signs_and_codes/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          description="This endpoint returns a dictionary which contains the full medical terminology for each sign as "
                      "well as the WikiData ID (if there is one).",
          params={
-             'animal': 'The species of animal to be diagnosed. This must be a valid animal as returned by '
+             'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
+                       'returned by'
                        '/api/data/animals. \n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', '
                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
 class getFullNameAndCode(Resource):
@@ -261,12 +267,13 @@ class getFullNameAndCode(Resource):
         return jsonify({'full names and codes': get_sign_names_and_codes(animal)})
 
 
-@api.route('/api/data/diseases_and_codes?animal=<string:animal>')
+@api.route('/api/data/diseases_and_codes/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          description="This endpoint returns a dictionary which contains the possible diseases for the given animal as "
-                     "well as the WikiData ID (if there is one).",
+                     "well as the WikiData ID (if one exists).",
          params={
-             'animal': 'The species. This must be a valid animal as returned by '
+             'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
+                       'returned by'
                        '/api/data/animals. \n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', '
                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
 class getDiseaseCodes(Resource):
