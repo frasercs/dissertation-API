@@ -168,7 +168,7 @@ class diagnose(Resource):
         # Normalise the results
         normalised_results = normalise(results)
 
-        return jsonify({'results': normalised_results, 'wiki ids': wiki_ids})
+        return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
 
 @api.route('/api/data/animal_details/<string:animal>')
