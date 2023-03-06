@@ -10,14 +10,14 @@ from werkzeug.exceptions import BadRequest
 app = Flask(__name__)
 CORS(app)
 
-api = Api(app, version='0.9', title='Diagnosis API',
+api = Api(app, version='1.0', title='Diagnosis API',
           description='A simple API to diagnose animals using Bayes Theorem. The current version only supports '
                       'Cattle, Sheep, Goat, Camel, Horse and Donkey. <style>.models {display: none !important}</style>',
           default='Diagnosis API', default_label='Diagnosis API')
 
 diagnosis_model = api.model('Diagnose', {
     'animal': fields.String(required=True,
-                            description='The species of animal. As of version 0.9 this can be \'Cattle\', \'Sheep\', '
+                            description='The species of animal. As of version 1.0 this can be \'Cattle\', \'Sheep\', '
                                         '\'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
                             example='Cattle'),
     'signs': fields.List(fields.String, required=True,
@@ -66,7 +66,12 @@ diagnosis_model = api.model('Diagnose', {
                      '/api/symptoms/\'animal\' (where \'animal\' is replaced by a valid string as mentioned before) '
                      'must be included. The data must be formatted as a JSON list of strings. The value of each '
                      'symptom being either 1 0, or -1. 1 means the symptom is present, 0 means the symptom is not '
-                     'observed, but may still be present, and -1 means the symptom is not present. \n \n Example JSON '
+                     'observed, but may still be present, and -1 means the symptom is not present. \n \n'
+                     'priors: This is an optional parameter which does not need to be passed in the payload. '
+                     'It is used to alter the prior likelihoods of diseases occuring which '
+                     'influences the outcome of the Bayes algorithm. If this is not included, the algorithm assumes '
+                     'equal prior likelihoods.'
+                     '\n \n Example JSON '
                      'object: \n \n  {\n"animal": "Cattle", \n\"symptoms\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, '
                      '\"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, '
                      '\"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}, '
@@ -171,7 +176,7 @@ class diagnose(Resource):
          params={
     'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid animal as '
               'returned by /api/data/animals. \n'
-              '\n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'},
+              '\n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'},
          description='This endpoint returns the list of diseases and signs for the given animal.')
 class diagnosisData(Resource):
     @staticmethod
@@ -234,7 +239,7 @@ class get_animals(Resource):
          description="This endpoint returns a list of signs required to diagnose the given animal.", params={
         'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as returned '
                   'by /api/data/animals.'
-                  '\n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or '
+                  '\n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or '
                   '\'Donkey\'.'})
 class getAnimalSigns(Resource):
     @staticmethod
@@ -254,7 +259,7 @@ class getAnimalSigns(Resource):
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                        'returned by'
-                       '/api/data/animals. \n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+                       '/api/data/animals. \n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', '
                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
 class getFullNameAndCode(Resource):
     @staticmethod
@@ -274,7 +279,7 @@ class getFullNameAndCode(Resource):
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                        'returned by'
-                       '/api/data/animals. \n \n As of version 0.9 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+                       '/api/data/animals. \n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', '
                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
 class getDiseaseCodes(Resource):
     @staticmethod
