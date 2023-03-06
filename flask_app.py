@@ -252,7 +252,7 @@ class getAnimalSigns(Resource):
         return jsonify(get_signs(animal))
 
 
-@api.route('/api/data/signs_and_codes/<string:animal>')
+@api.route('/api/data/full_sign_names_and_codes/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          description="This endpoint returns a dictionary which contains the full medical terminology for each sign as "
                      "well as the WikiData ID (if there is one).",
@@ -291,6 +291,26 @@ class getDiseaseCodes(Resource):
             raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
         return jsonify({'disease_codes': get_wiki_ids(animal)})
 
+@api.route('/api/data/signs_and_codes/<string:animal>')
+@api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
+            description="This endpoint returns a dictionary which contains the possible signs for the given animal as "
+                        "well as the WikiData ID (if one exists).",
+            params={
+                'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
+                        'returned by'
+                        '/api/data/valid_animals. \n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
+class getSignCodes(Resource):
+    @staticmethod
+    def get(animal):
+        animal = animal.capitalize()
+        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
+            and animal != 'Donkey':
+            # If the animal is invalid, raise an error
+            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
+        return jsonify({'sign_codes': get_sign_wiki_ids(animal)})
+
+
 
 def get_wiki_ids(animal):
     wiki_ids = {}
@@ -298,6 +318,14 @@ def get_wiki_ids(animal):
         for row in load_spreadsheet('Disease_Codes').rows:
             if row[0].value == disease:
                 wiki_ids[disease] = row[1].value
+    return wiki_ids
+
+def get_sign_wiki_ids(animal):
+    wiki_ids = {}
+    for sign in get_signs(animal):
+        for row in load_spreadsheet('Sign_Abbr').rows:
+            if row[0].value == sign:
+                wiki_ids[sign] = row[1].value
     return wiki_ids
 
 
