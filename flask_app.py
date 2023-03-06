@@ -175,7 +175,7 @@ class diagnose(Resource):
 @api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          params={
     'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid animal as '
-              'returned by /api/data/animals. \n'
+              'returned by /api/data/valid_animals. \n'
               '\n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.'},
          description='This endpoint returns the list of diseases and signs for the given animal.')
 class diagnosisData(Resource):
@@ -238,7 +238,7 @@ class get_animals(Resource):
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          description="This endpoint returns a list of signs required to diagnose the given animal.", params={
         'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as returned '
-                  'by /api/data/animals.'
+                  'by /api/data/valid_animals.'
                   '\n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', \'Camel\', \'Horse\' or '
                   '\'Donkey\'.'})
 class getAnimalSigns(Resource):
@@ -259,7 +259,7 @@ class getAnimalSigns(Resource):
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                        'returned by'
-                       '/api/data/animals. \n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+                       '/api/data/valid_animals. \n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', '
                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
 class getFullNameAndCode(Resource):
     @staticmethod
@@ -279,7 +279,7 @@ class getFullNameAndCode(Resource):
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                        'returned by'
-                       '/api/data/animals. \n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', '
+                       '/api/data/valid_animals. \n \n As of version 1.0 this can be \'Cattle\', \'Sheep\', \'Goat\', '
                        '\'Camel\', \'Horse\' or \'Donkey\'.'})
 class getDiseaseCodes(Resource):
     @staticmethod
