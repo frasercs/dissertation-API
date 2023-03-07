@@ -83,7 +83,7 @@ diagnosis_model = api.model('Diagnose', {
                      '\n \"priors\": { \"Anthrax\": 5, \"Babesiosis\": 5, \"Blackleg\": 5, \"CBPP\": 5, '
                      '\"Colibacillosis\": 5, \"Cowdriosis\": 5,\"FMD\": 5,\"Fasciolosis\": 5,\"LSD\": 5,\"Lungworm\": '
                      '25,\"Pasteurollosis\": 5,\"PGE / GIT parasite\": 5,\"Rabies\": 5,\"Trypanosomosis\": 5,'
-                     '\"Tuberculosis\": 5,\"ZZ_Other\": 5}}\n}')
+                     '\"Tuberculosis\": 5,\"ZZ_Other\": 5}\n}')
 @api.expect(diagnosis_model)
 class diagnose(Resource):
 
