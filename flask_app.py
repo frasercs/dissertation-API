@@ -133,7 +133,6 @@ class diagnose(Resource):
             # Check if the priors are valid
             for key in priors.keys():
                 if key not in diseases:
-                    print(key)
                     raise BadRequest('Invalid disease in priors.')
                 provided_keys.append(key)
             # Check if all diseases have been provided
