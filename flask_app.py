@@ -23,7 +23,7 @@ diagnosis_model = api.model('Diagnose', {
                             description='The species of animal. As of version 1.0 this can be \'Cattle\', \'Sheep\', '
                                         '\'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
                             example='Cattle'),
-    'signs': fields.List(fields.String, required=True,
+    'signs': fields.Raw(required=True,
                          description='The signs shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, '
                                      '\"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, '
                                      '\"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, '
@@ -32,7 +32,7 @@ diagnosis_model = api.model('Diagnose', {
                              "Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0,
                              "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0,
                              "Wght_L": 0}),
-    'priors': fields.List(fields.String, required=False,
+    'priors': fields.Raw(required=False,
                           description='This field can be used if you wish to specify which diseases are more likely '
                                       'than others. If left blank, the algorithm will assume all diseases have an '
                                       'equal chance of occurring. The values given MUST add up to 100. The values '
@@ -99,7 +99,7 @@ diagnosis_model = api.model('Diagnose', {
                      '\"Colibacillosis\": 5, \"Cowdriosis\": 5,\"FMD\": 5,\"Fasciolosis\": 5,\"LSD\": 5,\"Lungworm\": '
                      '25,\"Pasteurollosis\": 5,\"PGE / GIT parasite\": 5,\"Rabies\": 5,\"Trypanosomosis\": 5,'
                      '\"Tuberculosis\": 5,\"ZZ_Other\": 5}\n}')
-@api.expect(diagnosis_model)
+
 class diagnose(Resource):
 
     @staticmethod
@@ -107,6 +107,7 @@ class diagnose(Resource):
         return jsonify({'status': 'ok'})
 
     @staticmethod
+    @api.expect(diagnosis_model, validate=True)
     def post():
         # Get the data from the API request
         data = request.get_json()
