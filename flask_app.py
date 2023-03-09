@@ -8,7 +8,10 @@ from openpyxl import load_workbook
 from werkzeug.exceptions import BadRequest
 
 app = Flask(__name__)
+#fix the cors issue
 CORS(app)
+#create a global variable to store the workbook
+wb = None
 
 api = Api(app, version='1.0', title='Diagnosis API',
           description='A simple API to diagnose animals using Bayes Theorem.',
@@ -242,8 +245,7 @@ class diseaseSignMatrix(Resource):
 class get_animals(Resource):
     @staticmethod
     def get():
-        workbook = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
-        names = workbook.sheetnames
+        names = wb.sheetnames
         names.remove('Sheep vs Goat')
         names.remove('Cattle_Abbr')
         names.remove('Sheep_Abbr')
@@ -324,7 +326,7 @@ def get_wiki_ids(animal):
 def get_sign_wiki_ids(animal):
     wiki_ids = {}
     for sign in get_signs(animal):
-        for row in load_spreadsheet('Sign_Abbr').rows:
+        for row in wb['Sign_Abbr'].rows:
             if row[0].value == sign:
                 wiki_ids[sign] = row[1].value
     return wiki_ids
@@ -333,7 +335,7 @@ def get_sign_wiki_ids(animal):
 # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
 def get_likelihood_data(animal):
     # Load the correct Excel sheet
-    ws = load_spreadsheet(animal)
+    ws = wb[animal]
     if ws == -1:
         return -1
 
@@ -375,7 +377,7 @@ def get_likelihood_data(animal):
 def get_diseases(animal):
     # List which stores every given disease
     diseases = []
-    ws = load_spreadsheet(animal)
+    ws = wb[animal]
     if ws == -1:
         return -1
     # Populate the list of diseases
@@ -388,7 +390,7 @@ def get_diseases(animal):
 def get_signs(animal):
     # List which stores every given sign
     signs = []
-    ws_signs = load_spreadsheet(animal)
+    ws_signs = wb[animal]
     if ws_signs == -1:
         return -1
     # Populate the list of signs
@@ -399,7 +401,7 @@ def get_signs(animal):
 
 
 def get_sign_names_and_codes(animal):
-    ws = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))[animal + '_Abbr']
+    ws = wb[animal + '_Abbr']
     full_sign_data = {}
     medical_name = {}
     wikidata_code = {}
@@ -411,9 +413,8 @@ def get_sign_names_and_codes(animal):
 
 
 def load_spreadsheet(animal):
-    workbook = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
-    if animal in workbook.sheetnames:
-        return workbook[animal]
+    if animal in wb.sheetnames:
+        return wb[animal]
     else:
         return -1
 
@@ -430,5 +431,7 @@ def normalise(results):
 
 
 if __name__ == '__main__':
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
     app.debug = True
     app.run(port=5000)
