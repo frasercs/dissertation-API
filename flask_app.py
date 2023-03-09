@@ -7,11 +7,12 @@ from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
 from werkzeug.exceptions import BadRequest
 
+
+wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
 app = Flask(__name__)
 #fix the cors issue
 CORS(app)
 #create a global variable to store the workbook
-wb = None
 
 api = Api(app, version='1.0', title='Diagnosis API',
           description='A simple API to diagnose animals using Bayes Theorem.',
@@ -317,7 +318,7 @@ class getDiseaseCodes(Resource):
 def get_wiki_ids(animal):
     wiki_ids = {}
     for disease in get_diseases(animal):
-        for row in load_spreadsheet('Disease_Codes').rows:
+        for row in wb['Disease_Codes'].rows:
             if row[0].value == disease:
                 wiki_ids[disease] = row[1].value
     return wiki_ids
@@ -412,13 +413,6 @@ def get_sign_names_and_codes(animal):
     return full_sign_data
 
 
-def load_spreadsheet(animal):
-    if animal in wb.sheetnames:
-        return wb[animal]
-    else:
-        return -1
-
-
 # A function used to normalise the outputs of the bayes calculation
 def normalise(results):
     normalised_results = {}
@@ -432,6 +426,5 @@ def normalise(results):
 
 if __name__ == '__main__':
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-    wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
     app.debug = True
     app.run(port=5000)
