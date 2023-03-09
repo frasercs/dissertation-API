@@ -75,7 +75,7 @@ diagnosis_model = api.model('Diagnose', {
                      'equal prior likelihoods. The list of diseases and their prior likelihoods must add up to 100. '
                      'Data for the required parameters can be returned by the GET Method at '
                      '/api/data/full_disease_data/\'animal\''
-                     'which returns each disease as the key and the corresponding WikiData id as the value. \n \n '
+                     'which returns each disease as the key and the corresponding <a href="https://www.wikidata.org/">WikiData ID</a> as the value. \n \n '
                      '\n \n Example JSON '
                      'object: \n \n  {\n"animal": "Cattle", \n\"signs\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, '
                      '\"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, '
@@ -180,9 +180,9 @@ class diagnose(Resource):
          params={
              'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid '
                        'animal as returned by /api/data/valid_animals. \n \n'},
-         description='This endpoint will return diseases with their corresponding WikiData ID as well as the valid '
+         description='This endpoint will return diseases with their corresponding <a href="https://www.wikidata.org/">WikiData ID</a> as well as the valid '
                      'signs associated with the animal, with their corresponding full medical terminology in English'
-                     ' and their WikiData ID if one is available.\n \n ')
+                     ' and their <a href="https://www.wikidata.org/">WikiData ID</a> if one is available.\n \n ')
 class diagnosisData(Resource):
     @staticmethod
     def get(animal):
@@ -234,9 +234,9 @@ class get_animals(Resource):
 
 @api.route('/api/data/full_sign_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
-         description="This endpoint returns a dictionary which contains the full medical terminology for each sign"
-                     "in English as "
-                     "well as the WikiData ID (if there is one).",
+         description='This endpoint returns a dictionary which contains the full medical terminology for each sign'
+                     'in English as '
+                     'well as the <a href="https://www.wikidata.org/">WikiData ID</a> (if there is one).',
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                        'returned by'
@@ -254,8 +254,8 @@ class getFullNameAndCode(Resource):
 
 @api.route('/api/data/full_disease_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
-         description="This endpoint returns a dictionary which contains the possible diseases for the given animal as "
-                     "well as its corresponding WikiData ID (if one exists).",
+         description='This endpoint returns a dictionary which contains the possible diseases for the given animal as '
+                     'well as its corresponding <a href="https://www.wikidata.org/">WikiData ID</a> (if one exists).',
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                        'returned by'
