@@ -58,26 +58,29 @@ diagnosis_model = api.model('Diagnose', {
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
-         description='This API endpoint takes a JSON object containing the species of animal and a list of signs. It '
-                     'then returns a list of diseases and their likelihood of being the cause of the signs. \n \n The '
-                     'JSON object must contain both "animal" and "signs" and can optionally contain "priors" \n \n '
-                     'animal:  You can use the '
-                     '/api/data/valid_animals GET method to find out which animals are available for diagnosis. \n \n '
-                     'signs\': \'All signs detailed in the GET method '
+         description='<h1>Description</h1>'
+                     '<p>This endpoint takes a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object containing the species of animal and a list of signs, and optionally a list of prior likelihood values. It '
+                     'then returns a list of diseases and their likelihood of being the cause of the signs.</p> \n \n  '
+                     '<p>The <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object must contain both "animal" and "signs" and can optionally contain "priors"</p> \n \n '
+                     '<h1> Parameters</h1>'
+                     '<p>animal:  You can use the '
+                     '/api/data/valid_animals GET method to find out which animals are available for diagnosis.</p> \n \n '
+                     '<p>signs\': \'All signs detailed in the GET method '
                      '/api/data/full_sign_data/\'animal\' '
-                     'must be included. The data must be formatted as JSON, they key must be a string and the value '
+                     'must be included. The data must be formatted as a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object, the key must be a string and the value '
                      'of each'
                      'sign must be 1 0, or -1. 1 means the sign is present, 0 means the sign is not '
-                     'observed, but may still be present, and -1 means the sign is not present. \n \n'
-                     'priors: This is an optional parameter which does not need to be passed in the payload. '
+                     'observed, but may still be present, and -1 means the sign is not present.</p> \n \n'
+                     '<p>priors: This is an optional parameter which does not need to be passed in the payload. '
                      'It is used to alter the prior likelihoods of diseases occurring which '
                      'influences the outcome of the Bayes algorithm. If this is not included, the algorithm assumes '
                      'equal prior likelihoods. The list of diseases and their prior likelihoods must add up to 100. '
                      'Data for the required parameters can be returned by the GET Method at '
                      '/api/data/full_disease_data/\'animal\''
-                     'which returns each disease as the key and the corresponding <a href="https://www.wikidata.org/">WikiData ID</a> as the value. \n \n '
-                     '\n \n Example JSON '
-                     'object: \n \n  {\n"animal": "Cattle", \n\"signs\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, '
+                     'which returns each disease as the key and the corresponding <a href="https://www.wikidata.org/">WikiData ID</a> as the value. </p>\n \n '
+                    
+                     '\n \n <h1> Example <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a>'
+                     ' object:</h1> \n \n  {\n"animal": "Cattle", \n\"signs\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, '
                      '\"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, '
                      '\"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}, '
                      '\n \"priors\": { \"Anthrax\": 5, \"Babesiosis\": 5, \"Blackleg\": 5, \"CBPP\": 5, '
@@ -180,9 +183,15 @@ class diagnose(Resource):
          params={
              'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid '
                        'animal as returned by /api/data/valid_animals. \n \n'},
-         description='This endpoint will return diseases with their corresponding <a href="https://www.wikidata.org/">WikiData ID</a> as well as the valid '
-                     'signs associated with the animal, with their corresponding full medical terminology in English'
-                     ' and their <a href="https://www.wikidata.org/">WikiData ID</a> if one is available.\n \n ')
+         description='<h1>Description</h1>'
+                     '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object containing diagnosable diseases with their corresponding <a href="https://www.wikidata.org/">WikiData IDs</a> as well as the valid '
+                     'signs associated with the animal, their full medical terminology in English, and their corresponding <a href="https://www.wikidata.org/">WikiData IDs</a> (if they exist).</p>'
+                     '<h1>URL Parameters</h1>'
+                        '<ul>'
+                     '<li><p>animal: The species of animal you wish to retrieve signs and diseases for. This must be a valid '
+                        'animal as returned by /api/data/valid_animals. </p></li>'
+                        '</ul>'
+                     '\n \n ')
 class diagnosisData(Resource):
     @staticmethod
     def get(animal):
@@ -214,7 +223,8 @@ class diseaseSignMatrix(Resource):
 
 @api.route('/api/data/valid_animals')
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument'},
-         description="This endpoint returns a list of valid animals that can be used in the API. \n")
+         description='<h1>Description</h1>'
+                     '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object containing the names of animal species which are available for diagnosis in the /api/diagnose POST method below. </p>\n')
 class get_animals(Resource):
     @staticmethod
     def get():
@@ -234,13 +244,18 @@ class get_animals(Resource):
 
 @api.route('/api/data/full_sign_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
-         description='This endpoint returns a dictionary which contains the full medical terminology for each sign'
-                     'in English as '
-                     'well as the <a href="https://www.wikidata.org/">WikiData ID</a> (if there is one).',
+         description='<h1>Description</h1>'
+                     '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object which contains the full medical terminology for each sign'
+                     ' in English as '
+                     'well as the corresponding <a href="https://www.wikidata.org/">WikiData IDs</a> for the signs (if they exist).</p>'
+                     '<h1>URL Parameters</h1>'
+                        '<ul>'
+                     '<li><p>animal: The species of animal you wish to retrieve signs and diseases for. This must be a valid '
+                        'animal as returned by /api/data/valid_animals.</p></li>'
+                        '</ul>',
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
-                       'returned by'
-                       '/api/data/valid_animals. \n \n '})
+                       'returned by /api/data/valid_animals. \n \n '})
 class getFullNameAndCode(Resource):
     @staticmethod
     def get(animal):
@@ -254,8 +269,14 @@ class getFullNameAndCode(Resource):
 
 @api.route('/api/data/full_disease_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'},
-         description='This endpoint returns a dictionary which contains the possible diseases for the given animal as '
-                     'well as its corresponding <a href="https://www.wikidata.org/">WikiData ID</a> (if one exists).',
+         description='<h1>Description</h1>'
+                     '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object which contains the possible diseases for the given animal as '
+                     'well as the corresponding <a href="https://www.wikidata.org/">WikiData IDs</a> (if they exist).</p>'
+                     '<h1>URL Parameters</h1>'
+                        '<ul>'
+                     '<li><p>animal: The species of animal you wish to retrieve signs and diseases for. This must be a valid '
+                        'animal as returned by /api/data/valid_animals.</p></li>'
+                        '</ul>',
          params={
              'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                        'returned by'
