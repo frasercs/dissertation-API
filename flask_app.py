@@ -120,10 +120,9 @@ class diagnose(Resource):
         animal = animal.capitalize()
 
         # Check if the animal is valid
-        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
-                and animal != 'Donkey':
+        if animal not in get_animals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
+            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
 
         # Get the correct data from the data Excel sheet
         likelihoods = get_likelihood_data(animal)
@@ -132,7 +131,7 @@ class diagnose(Resource):
         diseases = get_diseases(animal)
 
         # Get the list of wiki ids
-        wiki_ids = get_wiki_ids(animal)
+        wiki_ids = get_disease_wiki_ids(animal)
 
         # Grab the list of signs from the API request data
         shown_signs = data['signs']
@@ -215,11 +214,10 @@ class diagnosisData(Resource):
     def get(animal):
         animal = animal.capitalize()
         # Load the correct Excel sheet
-        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
-                and animal != 'Donkey':
+        if animal not in get_animals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
-        return jsonify({'diseases': get_wiki_ids(animal), 'signs': get_sign_names_and_codes(animal)})
+            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+        return jsonify({'diseases': get_disease_wiki_ids(animal), 'signs': get_sign_names_and_codes(animal)})
 
 
 @api.route('/api/matrix/<string:animal>')
@@ -227,15 +225,15 @@ class diagnosisData(Resource):
 class diseaseSignMatrix(Resource):
     @staticmethod
     def get(animal):
+        # Handle capitalisation
         animal = animal.capitalize()
-
-        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
-                and animal != 'Donkey':
+        # Check if the animal is valid
+        if animal not in get_animals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
-
+            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+        # Get the correct data from the data Excel sheet
         data = get_likelihood_data(animal)
-
+        # Return the data
         return jsonify(data)
 
 
@@ -248,7 +246,9 @@ class diseaseSignMatrix(Resource):
 class get_animals(Resource):
     @staticmethod
     def get():
+        # Load the Excel sheet
         names = wb.sheetnames
+        # Remove the sheets which are not animals
         names.remove('Sheep vs Goat')
         names.remove('Cattle_Abbr')
         names.remove('Sheep_Abbr')
@@ -258,6 +258,7 @@ class get_animals(Resource):
         names.remove('Donkey_Abbr')
         names.remove('Sign_Abbr')
         names.remove('Disease_Codes')
+        # Return the names
         return jsonify(names)
 
 
@@ -281,11 +282,13 @@ class get_animals(Resource):
 class getFullNameAndCode(Resource):
     @staticmethod
     def get(animal):
+        # Handle capitalisation
         animal = animal.capitalize()
-        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
-                and animal != 'Donkey':
+        # Check if the animal is valid
+        if animal not in get_animals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
+            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+        # Return the data
         return jsonify({'full_sign_data': get_sign_names_and_codes(animal)})
 
 
@@ -309,29 +312,41 @@ class getFullNameAndCode(Resource):
 class getDiseaseCodes(Resource):
     @staticmethod
     def get(animal):
+        # Handle capitalisation
         animal = animal.capitalize()
-        if animal != 'Cattle' and animal != 'Sheep' and animal != 'Goat' and animal != 'Camel' and animal != 'Horse' \
-                and animal != 'Donkey':
+        # Check if the animal is valid
+        if animal not in get_animals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use Cattle, Sheep, Goat, Camel, Horse or Donkey.')
-        return jsonify({'disease_codes': get_wiki_ids(animal)})
+            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+        # Return the data
+        return jsonify({'disease_codes': get_disease_wiki_ids(animal)})
 
 
-def get_wiki_ids(animal):
+def get_disease_wiki_ids(animal):
+    # Empty dictionary to store the WikiData IDs
     wiki_ids = {}
+    # Get the list of diseases
     for disease in get_diseases(animal):
+        # Loop through the diseases in the Excel sheet
         for row in wb['Disease_Codes'].rows:
+            # If the disease is found, add it to the dictionary
             if row[0].value == disease:
                 wiki_ids[disease] = row[1].value
+    # Return the dictionary
     return wiki_ids
 
 
 def get_sign_wiki_ids(animal):
+    # Empty dictionary to store the WikiData IDs
     wiki_ids = {}
+    # Get the list of signs
     for sign in get_signs(animal):
         for row in wb['Sign_Abbr'].rows:
+            # If the sign is found, add it to the dictionary
             if row[0].value == sign:
+                # Add the WikiData ID to the dictionary
                 wiki_ids[sign] = row[1].value
+    # Return the dictionary
     return wiki_ids
 
 
@@ -339,6 +354,7 @@ def get_sign_wiki_ids(animal):
 def get_likelihood_data(animal):
     # Load the correct Excel sheet
     ws = wb[animal]
+    # Check if the animal exists
     if ws == -1:
         return -1
 
