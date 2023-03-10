@@ -351,28 +351,23 @@ def get_likelihood_data(animal):
     # Dictionary which stores the likelihoods of each disease
     likelihoods = {}
 
-    # Counter used to keep track of the current disease
-    disease_counter = 0
 
     # Loop through all rows in the workbook
-    for row in ws.rows:
+    for i, row in enumerate(ws.rows):
         # Skip the first row as it is just the headers
-        if row[0].value == 'Disease':
-            disease_counter = 0
+        if i==0 :
             continue
 
         # Counter used to keep track of the current sign
-        sign_counter = 0
+
         # Dictionary which stores the likelihoods of each sign for the current disease
         current_disease_likelihoods = {}
 
         # Loop through all cells in each row except the first one as it is the disease name
-        for cell in row[1:]:
+        for j, cell in enumerate(row[1:]):
             chance = cell.value
-            current_disease_likelihoods[signs[sign_counter]] = chance
-            sign_counter += 1
-        likelihoods[diseases[disease_counter]] = current_disease_likelihoods
-        disease_counter += 1
+            current_disease_likelihoods[signs[j]] = chance
+        likelihoods[diseases[i-1]] = current_disease_likelihoods
 
     return likelihoods
 
