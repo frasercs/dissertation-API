@@ -7,8 +7,10 @@ from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
 from werkzeug.exceptions import BadRequest
 
+
 # load the Excel file
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
+
 # init the api
 api = Api(version='1.0', title='Diagnosis API', description='A simple API to diagnose animals using Bayes Theorem.',
           default='Diagnosis API', default_label='Diagnosis API')
@@ -109,7 +111,7 @@ class diagnose(Resource):
         # Check if the animal is valid
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+            raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
 
         # Get the correct data from the data Excel sheet
         likelihoods = get_likelihood_data(animal)
@@ -126,7 +128,7 @@ class diagnose(Resource):
         # Check if the signs values are all valid
         for value in shown_signs.values():
             if value not in [-1, 0, 1]:
-                raise BadRequest('Sign values must be either -1, 0 or 1')
+                raise BadRequest('Error with value: ' +  str(value) +'. Sign values must be either -1, 0 or 1')
 
         # Grab the priors from the API request data (if they exist)
 
@@ -136,18 +138,18 @@ class diagnose(Resource):
             # Check if the priors are valid
             for key in priors.keys():
                 if key not in diseases:
-                    raise BadRequest('Invalid disease in priors.')
+                    raise BadRequest('Disease: ' + key +' is not a valid disease. Please use a valid disease from /api/data/full_disease_data/\'animal\'.')
                 provided_keys.append(key)
             # Check if all diseases have been provided
             for disease in diseases:
                 if disease not in provided_keys:
-                    raise BadRequest('Missing disease in priors.')
+                    raise BadRequest('Missing \'' + disease + '\' in priors. Please provide a prior likelihood value for all diseases.')
             # Check if the priors add up to 100
             total_value = 0
             for value in priors.values():
                 total_value += value
             if total_value != 100:
-                raise BadRequest('Priors must add up to 100.')
+                raise BadRequest('Priors must add up to 100. Currently they add up to ' + str(total_value) + '.')
             # If the priors are valid, use them
             prior_likelihoods = priors
         # If the priors are not provided, use the default priors
@@ -201,7 +203,7 @@ class getRequiredInputData(Resource):
         # Load the correct Excel sheet
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+            raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         return jsonify({'diseases': get_disease_wiki_ids(animal), 'signs': get_sign_names_and_codes(animal)})
 
 
@@ -215,7 +217,7 @@ class getDiseaseSignMatrix(Resource):
         # Check if the animal is valid
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+            raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         # Get the correct data from the data Excel sheet
         data = get_likelihood_data(animal)
         # Return the data
@@ -269,7 +271,7 @@ class getSignCodesAndTerminology(Resource):
         # Check if the animal is valid
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+            raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         # Return the data
         return jsonify({'full_sign_data': get_sign_names_and_codes(animal)})
 
@@ -292,12 +294,12 @@ class getSignCodesAndTerminology(Resource):
 class getDiseaseCodes(Resource):
     @staticmethod
     def get(animal):
-        # Handle capitalisation
+        # Handle capitalisation to allow for case insensitivity
         animal = animal.capitalize()
         # Check if the animal is valid
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal, please use a valid animal from /api/data/valid_animals.')
+            raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         # Return the data
         return jsonify({'disease_codes': get_disease_wiki_ids(animal)})
 
