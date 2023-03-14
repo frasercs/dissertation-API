@@ -234,16 +234,8 @@ class getAnimals(Resource):
     def get():
         # Load the Excel sheet
         names = wb.sheetnames
-        # Remove the sheets which are not animals
-        names.remove('Sheep vs Goat')
-        names.remove('Cattle_Abbr')
-        names.remove('Sheep_Abbr')
-        names.remove('Goat_Abbr')
-        names.remove('Camel_Abbr')
-        names.remove('Horse_Abbr')
-        names.remove('Donkey_Abbr')
-        names.remove('Sign_Abbr')
-        names.remove('Disease_Codes')
+        # Remove the sheets which names contain "_Abbr" or "_Codes"
+        names = [name for name in names if "_Abbr" not in name and "_Codes" not in name]
         # Return the names
         return jsonify(names)
 
