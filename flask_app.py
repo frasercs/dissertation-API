@@ -232,10 +232,8 @@ class getDiseaseSignMatrix(Resource):
 class getAnimals(Resource):
     @staticmethod
     def get():
-        # Load the Excel sheet
-        names = wb.sheetnames
-        # Remove the sheets which names contain "_Abbr" or "_Codes"
-        names = [name for name in names if "_Abbr" not in name and "_Codes" not in name]
+        # Get the Excel sheets which don't contain _Abbr or _Codes
+        names = [name for name in wb.sheetnames if "_Abbr" not in name and "_Codes" not in name]
         # Return the names
         return jsonify(names)
 
