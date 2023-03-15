@@ -1,5 +1,4 @@
 
-
 import os
 import sys
 
@@ -55,9 +54,157 @@ diagnosis_payload_model = api.model('Diagnose', {'animal': fields.String(require
 
 
 
+class getHelper:
+
+    def __init__(self, *args, **kwargs):
+        super(getHelper, self).__init__(*args, **kwargs)
 
 
+    # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
+    def get_disease_wiki_ids(self, animal):
+        # Empty dictionary to store the WikiData IDs
+        wiki_ids = {}
+        # Get the list of diseases
+        for disease in self.get_diseases(animal):
+            # Loop through the diseases in the Excel sheet
+            for row in wb['Disease_Codes'].rows:
+                # If the disease is found, add it to the dictionary
+                if row[0].value == disease:
+                    wiki_ids[disease] = row[1].value
+        # Return the dictionary
+        return wiki_ids
 
+
+    # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
+    def get_likelihood_data(self, animal):
+        # Load the correct Excel sheet
+        ws = wb[animal]
+        # Check if the animal exists
+        if ws == -1:
+            return -1
+
+        # Get the list of signs and diseases
+        signs = self.get_signs(animal)
+        diseases = self.get_diseases(animal)
+        if signs == -1 or diseases == -1:
+            return -1
+
+        # Dictionary which stores the likelihoods of each disease
+        likelihoods = {}
+
+        # Loop through all rows in the workbook
+        for i, row in enumerate(ws.rows):
+            # Skip the first row as it is just the headers
+            if i == 0:
+                continue
+
+            # Counter used to keep track of the current sign
+
+            # Dictionary which stores the likelihoods of each sign for the current disease
+            current_disease_likelihoods = {}
+
+            # Loop through all cells in each row except the first one as it is the disease name
+            for j, cell in enumerate(row[1:]):
+                chance = cell.value
+                current_disease_likelihoods[signs[j]] = chance
+            likelihoods[diseases[i - 1]] = current_disease_likelihoods
+
+        return likelihoods
+
+    @staticmethod
+    def get_diseases(animal):
+        # List which stores every given disease
+        diseases = []
+        ws = wb[animal]
+        if ws == -1:
+            return -1
+        # Populate the list of diseases
+        for row in ws.iter_rows(min_row=2, max_col=1, max_row=ws.max_row):
+            for cell in row:
+                diseases.append(cell.value)
+        return diseases
+
+    @staticmethod
+    def get_signs(animal):
+        # List which stores every given sign
+        signs = []
+        ws_signs = wb[animal]
+        if ws_signs == -1:
+            return -1
+        # Populate the list of signs
+        for col in ws_signs.iter_cols(min_col=2, max_row=1):
+            for cell in col:
+                signs.append(cell.value)
+        return signs
+
+    @staticmethod
+    def get_sign_names_and_codes(animal):
+        ws = wb[animal + '_Abbr']
+        full_sign_data = {}
+        medical_name = {}
+        wikidata_code = {}
+        for row in ws.rows:
+            medical_name["name"] = row[1].value
+            wikidata_code["code"] = row[2].value
+            full_sign_data[row[0].value] = {**medical_name, **wikidata_code}
+        return full_sign_data
+
+
+class diagnosisHelper:
+
+    @staticmethod
+    def validate_priors(priors, diseases):
+        provided_keys = []
+        for key in priors.keys():
+            if key not in diseases:
+                raise BadRequest(
+                    f"Disease '{key}' is not a valid disease. Please use a valid disease from {diseases}.")
+            provided_keys.append(key)
+
+        for disease in diseases:
+            if disease not in provided_keys:
+                raise BadRequest(
+                    f"Missing '{disease}' in priors. Please provide a prior likelihood value for all diseases.")
+
+        total_value = sum(priors.values())
+        if total_value != 100:
+            raise BadRequest(f"Priors must add up to 100. Currently they add up to {total_value}.")
+
+        return priors
+
+    @staticmethod
+    def calculate_results(diseases, likelihoods, shown_signs, priors):
+        results = {}
+        for disease in diseases:
+            chain_probability = 1.0
+            current_likelihoods = likelihoods[disease]
+            for s in shown_signs:
+                presence = shown_signs[s]
+                if presence == 1:
+                    chain_probability *= current_likelihoods[s]
+                elif presence == -1:
+                    chain_probability *= (1 - current_likelihoods[s])
+            posterior = chain_probability * priors[disease]
+            results[disease] = posterior * 100
+        return results
+
+    @staticmethod
+    # A function used to normalise the outputs of the bayes calculation
+    def normalise(results):
+        normalised_results = {}
+        summed_results = sum(results.values())
+        for r in results:
+            value = results[r]
+            norm = value / summed_results
+            normalised_results[r] = norm * 100
+        return normalised_results
+
+    @staticmethod
+    def get_default_priors(diseases):
+        priors = {}
+        for disease in diseases:
+            priors[disease] = 100 / len(diseases)
+        return priors
 
 
 @api.route('/api/diagnose/', methods=['POST'])
@@ -100,16 +247,17 @@ diagnosis_payload_model = api.model('Diagnose', {'animal': fields.String(require
                                                                                                '\"Tuberculosis\": 5,\"ZZ_Other\": 5}\n}')
 class diagnose(Resource):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.dh = diagnosisHelper()
         self.gh = getHelper()
+        self.dh = diagnosisHelper()
+        super(diagnose, self).__init__(*args, **kwargs)
+
     @staticmethod
     def options() -> Response:
         return jsonify({'status': 'ok'})
 
-    @staticmethod
+
     @api.expect(diagnosis_payload_model, validate=True)
-    def post() -> Response:
+    def post(self) -> Response:
 
         # Get the data from the API request
         data: [str, Union[str, Dict[str, int], None]] = request.get_json()
@@ -125,11 +273,11 @@ class diagnose(Resource):
             raise BadRequest(f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
 
         # Get the correct data from the data Excel sheet
-        likelihoods: Dict[str, Dict[str, float]] = getHelper.get_likelihood_data(animal)
+        likelihoods: Dict[str, Dict[str, float]] = self.gh.get_likelihood_data(animal)
         # Get the list of diseases
-        diseases: List[str] = getHelper.get_diseases(animal)
+        diseases: List[str] = self.gh.get_diseases(animal)
         # Get the list of wiki ids
-        wiki_ids: Dict[str, str] = getHelper.get_disease_wiki_ids(animal)
+        wiki_ids: Dict[str, str] = self.gh.get_disease_wiki_ids(animal)
 
         # Grab the list of signs from the API request data
         shown_signs: Dict[str, int] = data['signs']
@@ -144,12 +292,12 @@ class diagnose(Resource):
         # Grab the priors from the API request data (if they exist)
         priors: Dict[str, float] = data.get('priors')
         if priors is not None:
-            priors = diagnosisHelper.validate_priors(priors, diseases)
+            priors = self.dh.validate_priors(priors, diseases)
         else:
-            priors = diagnosisHelper.get_default_priors(diseases)
+            priors = self.dh.get_default_priors(diseases)
 
-        results: Dict[str, float] = diagnosisHelper.calculate_results(diseases, likelihoods, shown_signs, priors)
-        normalised_results: Dict[str, float] = diagnosisHelper.normalise(results)
+        results: Dict[str, float] = self.dh.calculate_results(diseases, likelihoods, shown_signs, priors)
+        normalised_results: Dict[str, float] = self.dh.normalise(results)
 
         return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
@@ -175,21 +323,30 @@ class diagnose(Resource):
                                                                                                 '</ul>'
                                                                                                 '\n \n ')
 class getRequiredInputData(Resource):
-    @staticmethod
-    def get(animal):
+    def __init__(self, *args, **kwargs):
+        self.gh = getHelper()
+        super(getRequiredInputData, self).__init__(*args, **kwargs)
+
+
+    def get(self, animal):
         animal = animal.capitalize()
         # Load the correct Excel sheet
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
             raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
-        return jsonify({'diseases': getHelper.get_disease_wiki_ids(animal), 'signs': getHelper.get_sign_names_and_codes(animal)})
+        return jsonify \
+            ({'diseases': self.gh.get_disease_wiki_ids(animal), 'signs': self.gh.get_sign_names_and_codes(animal)})
 
 
 @api.route('/api/matrix/<string:animal>')
 @api.hide
 class getDiseaseSignMatrix(Resource):
-    @staticmethod
-    def get(animal):
+    def __init__(self, *args, **kwargs):
+        self.gh = getHelper()
+        super(getDiseaseSignMatrix, self).__init__(*args, **kwargs)
+
+
+    def get(self, animal):
         # Handle capitalisation
         animal = animal.capitalize()
         # Check if the animal is valid
@@ -197,7 +354,7 @@ class getDiseaseSignMatrix(Resource):
             # If the animal is invalid, raise an error
             raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         # Get the correct data from the data Excel sheet
-        data = getHelper.get_likelihood_data(animal)
+        data = self.gh.get_likelihood_data(animal)
         # Return the data
         return jsonify(data)
 
@@ -232,8 +389,12 @@ class getAnimals(Resource):
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by /api/data/valid_animals. \n \n '})
 class getSignCodesAndTerminology(Resource):
-    @staticmethod
-    def get(animal):
+    def __init__(self, *args, **kwargs):
+        self.gh = getHelper()
+        super(getSignCodesAndTerminology, self).__init__(*args, **kwargs)
+
+
+    def get(self, animal):
         # Handle capitalisation
         animal = animal.capitalize()
         # Check if the animal is valid
@@ -241,7 +402,7 @@ class getSignCodesAndTerminology(Resource):
             # If the animal is invalid, raise an error
             raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         # Return the data
-        return jsonify({'full_sign_data': getHelper.get_sign_names_and_codes(animal)})
+        return jsonify({'full_sign_data': self.gh.get_sign_names_and_codes(animal)})
 
 
 @api.route('/api/data/full_disease_data/<string:animal>')
@@ -260,8 +421,13 @@ class getSignCodesAndTerminology(Resource):
                            'returned by'
                            '/api/data/valid_animals. \n \n'})
 class getDiseaseCodes(Resource):
-    @staticmethod
-    def get(animal):
+
+    def __init__(self, *args, **kwargs):
+        self.gh = getHelper()
+        super(getDiseaseCodes, self).__init__(*args, **kwargs)
+
+
+    def get(self, animal):
         # Handle capitalisation to allow for case insensitivity
         animal = animal.capitalize()
         # Check if the animal is valid
@@ -269,164 +435,12 @@ class getDiseaseCodes(Resource):
             # If the animal is invalid, raise an error
             raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         # Return the data
-        return jsonify({'disease_codes': getHelper.get_disease_wiki_ids(animal)})
-
-class diagnosisHelper:
-
-        def __init__(self):
-            self.diseases = []
-            self.likelihoods = {}
-            self.signs = []
-            self.priors = {}
-
-        @staticmethod
-        def validate_priors(priors, diseases):
-            provided_keys = []
-            for key in priors.keys():
-                if key not in diseases:
-                    raise BadRequest(
-                        f"Disease '{key}' is not a valid disease. Please use a valid disease from {diseases}.")
-                provided_keys.append(key)
-
-            for disease in diseases:
-                if disease not in provided_keys:
-                    raise BadRequest(
-                        f"Missing '{disease}' in priors. Please provide a prior likelihood value for all diseases.")
-
-            total_value = sum(priors.values())
-            if total_value != 100:
-                raise BadRequest(f"Priors must add up to 100. Currently they add up to {total_value}.")
-
-            return priors
-
-        @staticmethod
-        def calculate_results(diseases, likelihoods, shown_signs, priors):
-            results = {}
-            for disease in diseases:
-                chain_probability = 1.0
-                current_likelihoods = likelihoods[disease]
-                for s in shown_signs:
-                    presence = shown_signs[s]
-                    if presence == 1:
-                        chain_probability *= current_likelihoods[s]
-                    elif presence == -1:
-                        chain_probability *= (1 - current_likelihoods[s])
-                posterior = chain_probability * priors[disease]
-                results[disease] = posterior * 100
-            return results
-
-        @staticmethod
-        # A function used to normalise the outputs of the bayes calculation
-        def normalise(results):
-            normalised_results = {}
-            summed_results = sum(results.values())
-            for r in results:
-                value = results[r]
-                norm = value / summed_results
-                normalised_results[r] = norm * 100
-            return normalised_results
-
-        @staticmethod
-        def get_default_priors(diseases):
-            priors = {}
-            for disease in diseases:
-                priors[disease] = 100 / len(diseases)
-            return priors
+        return jsonify({'disease_codes': self.gh.get_disease_wiki_ids(animal)})
 
 
 
-class getHelper:
-
-    def __init__(self):
-        pass
-
-    def get_disease_wiki_ids(animal):
-        # Empty dictionary to store the WikiData IDs
-        wiki_ids = {}
-        # Get the list of diseases
-        for disease in getHelper.get_diseases(animal):
-            # Loop through the diseases in the Excel sheet
-            for row in wb['Disease_Codes'].rows:
-                # If the disease is found, add it to the dictionary
-                if row[0].value == disease:
-                    wiki_ids[disease] = row[1].value
-        # Return the dictionary
-        return wiki_ids
 
 
-    # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
-    def get_likelihood_data(animal):
-        # Load the correct Excel sheet
-        ws = wb[animal]
-        # Check if the animal exists
-        if ws == -1:
-            return -1
-
-        # Get the list of signs and diseases
-        signs = getHelper.get_signs(animal)
-        diseases = getHelper.get_diseases(animal)
-        if signs == -1 or diseases == -1:
-            return -1
-
-        # Dictionary which stores the likelihoods of each disease
-        likelihoods = {}
-
-        # Loop through all rows in the workbook
-        for i, row in enumerate(ws.rows):
-            # Skip the first row as it is just the headers
-            if i == 0:
-                continue
-
-            # Counter used to keep track of the current sign
-
-            # Dictionary which stores the likelihoods of each sign for the current disease
-            current_disease_likelihoods = {}
-
-            # Loop through all cells in each row except the first one as it is the disease name
-            for j, cell in enumerate(row[1:]):
-                chance = cell.value
-                current_disease_likelihoods[signs[j]] = chance
-            likelihoods[diseases[i - 1]] = current_disease_likelihoods
-
-        return likelihoods
-
-
-    def get_diseases(animal):
-        # List which stores every given disease
-        diseases = []
-        ws = wb[animal]
-        if ws == -1:
-            return -1
-        # Populate the list of diseases
-        for row in ws.iter_rows(min_row=2, max_col=1, max_row=ws.max_row):
-            for cell in row:
-                diseases.append(cell.value)
-        return diseases
-
-
-    def get_signs(animal):
-        # List which stores every given sign
-        signs = []
-        ws_signs = wb[animal]
-        if ws_signs == -1:
-            return -1
-        # Populate the list of signs
-        for col in ws_signs.iter_cols(min_col=2, max_row=1):
-            for cell in col:
-                signs.append(cell.value)
-        return signs
-
-
-    def get_sign_names_and_codes(animal):
-        ws = wb[animal + '_Abbr']
-        full_sign_data = {}
-        medical_name = {}
-        wikidata_code = {}
-        for row in ws.rows:
-            medical_name["name"] = row[1].value
-            wikidata_code["code"] = row[2].value
-            full_sign_data[row[0].value] = {**medical_name, **wikidata_code}
-        return full_sign_data
 
 
 if __name__ == '__main__':
