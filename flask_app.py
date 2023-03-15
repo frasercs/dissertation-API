@@ -1,13 +1,12 @@
-
 import os
 import sys
+from typing import Dict, List, Union
 
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
 from werkzeug.exceptions import BadRequest
-from typing import Dict, List, Union
 
 # load the Excel file
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
@@ -53,12 +52,10 @@ diagnosis_payload_model = api.model('Diagnose', {'animal': fields.String(require
                                                                                "ZZ_Other": 5})})
 
 
-
 class getHelper:
 
     def __init__(self, *args, **kwargs):
         super(getHelper, self).__init__(*args, **kwargs)
-
 
     # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
     def get_disease_wiki_ids(self, animal):
@@ -73,7 +70,6 @@ class getHelper:
                     wiki_ids[disease] = row[1].value
         # Return the dictionary
         return wiki_ids
-
 
     # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
     def get_likelihood_data(self, animal):
@@ -157,8 +153,7 @@ class diagnosisHelper:
         provided_keys = []
         for key in priors.keys():
             if key not in diseases:
-                raise BadRequest(
-                    f"Disease '{key}' is not a valid disease. Please use a valid disease from {diseases}.")
+                raise BadRequest(f"Disease '{key}' is not a valid disease. Please use a valid disease from {diseases}.")
             provided_keys.append(key)
 
         for disease in diseases:
@@ -255,7 +250,6 @@ class diagnose(Resource):
     def options() -> Response:
         return jsonify({'status': 'ok'})
 
-
     @api.expect(diagnosis_payload_model, validate=True)
     def post(self) -> Response:
 
@@ -302,10 +296,6 @@ class diagnose(Resource):
         return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
 
-
-
-
-
 @api.route('/api/data/full_animal_data/<string:animal>')
 @api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          params={'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid '
@@ -327,15 +317,14 @@ class getRequiredInputData(Resource):
         self.gh = getHelper()
         super(getRequiredInputData, self).__init__(*args, **kwargs)
 
-
     def get(self, animal):
         animal = animal.capitalize()
         # Load the correct Excel sheet
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
             raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
-        return jsonify \
-            ({'diseases': self.gh.get_disease_wiki_ids(animal), 'signs': self.gh.get_sign_names_and_codes(animal)})
+        return jsonify(
+            {'diseases': self.gh.get_disease_wiki_ids(animal), 'signs': self.gh.get_sign_names_and_codes(animal)})
 
 
 @api.route('/api/matrix/<string:animal>')
@@ -344,7 +333,6 @@ class getDiseaseSignMatrix(Resource):
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
         super(getDiseaseSignMatrix, self).__init__(*args, **kwargs)
-
 
     def get(self, animal):
         # Handle capitalisation
@@ -393,7 +381,6 @@ class getSignCodesAndTerminology(Resource):
         self.gh = getHelper()
         super(getSignCodesAndTerminology, self).__init__(*args, **kwargs)
 
-
     def get(self, animal):
         # Handle capitalisation
         animal = animal.capitalize()
@@ -426,7 +413,6 @@ class getDiseaseCodes(Resource):
         self.gh = getHelper()
         super(getDiseaseCodes, self).__init__(*args, **kwargs)
 
-
     def get(self, animal):
         # Handle capitalisation to allow for case insensitivity
         animal = animal.capitalize()
@@ -436,11 +422,6 @@ class getDiseaseCodes(Resource):
             raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
         # Return the data
         return jsonify({'disease_codes': self.gh.get_disease_wiki_ids(animal)})
-
-
-
-
-
 
 
 if __name__ == '__main__':
