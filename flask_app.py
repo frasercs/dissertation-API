@@ -21,35 +21,238 @@ CORS(app)
 # init the api using factory pattern
 api.init_app(app)
 
-diagnosis_payload_model = api.model('Diagnose', {'animal': fields.String(required=True,
-                                                                         description='The species of animal. As of version 1.0 this can be \'Cattle\', \'Sheep\', '
-                                                                                     '\'Goat\', \'Camel\', \'Horse\' or \'Donkey\'.',
-                                                                         example='Cattle'),
-                                                 'signs': fields.Raw(required=True,
-                                                                     description='The signs shown by the animal. For example: {\"Anae\": 0, \"Anrx\": 1, '
-                                                                                 '\"Atax\": 0, \"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, '
-                                                                                 '\"Icter\": 0, \"Lymph\": -1, \"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, '
-                                                                                 '\"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}',
-                                                                     example={"Anae": 0, "Anrx": 1, "Atax": 0,
-                                                                              "Const": 0, "Diarr": 0, "Dysnt": 1,
-                                                                              "Dyspn": 0, "Icter": 0, "Lymph": -1,
-                                                                              "Pyrx": 0, "Stare": 0, "Stunt": 0,
-                                                                              "SV_Oedm": 1, "Weak": 0, "Wght_L": 0}),
-                                                 'priors': fields.Raw(required=False,
-                                                                      description='This field can be used if you wish to specify which diseases are more likely '
-                                                                                  'than others. If left blank, the algorithm will assume all diseases have an '
-                                                                                  'equal chance of occurring. The values given MUST add up to 100. The values '
-                                                                                  'given are the percentage likelihood of each disease occurring. \n \n You must '
-                                                                                  'provide data for every disease. This is the case as without every disease '
-                                                                                  'being considered, the algorithm\'s output will be far less accurate',
-                                                                      example={"Anthrax": 5, "Babesiosis": 5,
-                                                                               "Blackleg": 5, "CBPP": 5,
-                                                                               "Colibacillosis": 5, "Cowdriosis": 5,
-                                                                               "FMD": 5, "Fasciolosis": 5, "LSD": 5,
-                                                                               "Lungworm": 25, "Pasteurollosis": 5,
-                                                                               "PGE / GIT parasite": 5, "Rabies": 5,
-                                                                               "Trypanosomosis": 5, "Tuberculosis": 5,
-                                                                               "ZZ_Other": 5})})
+diagnosis_payload_model = api.model('Diagnose',
+                                    {'animal': fields.String(required=True, description='The species of animal. As of '
+                                                                                        'version 1.0 this can be '
+                                                                                        '\'Cattle\', \'Sheep\','
+                                                                                        '\'Goat\', \'Camel\', \'Horse\''
+                                                                                        'or \'Donkey\'.',
+                                                             example='Cattle'),
+                                     'signs': fields.Raw(required=True, description='The signs shown by the animal. For'
+                                                                                    'example: {\"Anae\": 0, \"Anrx\":'
+                                                                                    '1,'
+                                                                                    '\"Atax\": 0, \"Const\": 0,'
+                                                                                    '\"Diarr\": 0, \"Dysnt\": 1, '
+                                                                                    '\"Dyspn\": 0,'
+                                                                                    '\"Icter\": 0, \"Lymph\": -1,'
+                                                                                    '\"Pyrx\": 0, \"Stare\": 0, '
+                                                                                    '\"Stunt\": 0,'
+                                                                                    '\"SV_Oedm\": 1, \"Weak\": 0,'
+                                                                                    '\"Wght_L\": 0}',
+                                                         example={"Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0,
+                                                                  "Diarr": 0, "Dysnt": 1, "Dyspn": 0, "Icter": 0,
+                                                                  "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0,
+                                                                  "SV_Oedm": 1, "Weak": 0, "Wght_L": 0}),
+                                     'priors': fields.Raw(required=False,
+                                                          description='This field can be used if you wish'
+                                                                      'to specify which diseases are more '
+                                                                      'likely'
+                                                                      'than others. If left blank, the '
+                                                                      'algorithm will assume all diseases '
+                                                                      'have an'
+                                                                      'equal chance of occurring. The'
+                                                                      'values given MUST add up to 100. '
+                                                                      'The values'
+                                                                      'given are the percentage '
+                                                                      'likelihood of each disease '
+                                                                      'occurring. \n \n You must'
+                                                                      'provide data for every disease. This is the '
+                                                                      'case as without every disease'
+                                                                      'being considered, the algorithm\'s output will'
+                                                                      'be far less accurate',
+                                                          example={"Anthrax": 5, "Babesiosis": 5, "Blackleg": 5,
+                                                                   "CBPP": 5, "Colibacillosis": 5, "Cowdriosis": 5,
+                                                                   "FMD": 5, "Fasciolosis": 5, "LSD": 5, "Lungworm": 25,
+                                                                   "Pasteurollosis": 5, "PGE / GIT parasite": 5,
+                                                                   "Rabies": 5, "Trypanosomosis": 5, "Tuberculosis": 5,
+                                                                   "ZZ_Other": 5}),
+                                     'likelihoods': fields.Raw(required=False, description='This field can be used to '
+                                                                                           'define your own'
+                                                                                           'likelihood data'
+                                                                                           'for each disease being'
+                                                                                           'the cause of each sign.'
+                                                                                           'If left blank, '
+                                                                                           'the algorithm will use '
+                                                                                           'the default'
+                                                                                           'likelihood data. The'
+                                                                                           'values given MUST add up '
+                                                                                           'to be greater than 0 and '
+                                                                                           'less than 1'
+                                                                                           '. The values given are '
+                                                                                           'the percentage likelihood '
+                                                                                           'of each sign being '
+                                                                                           'present when the'
+                                                                                           'animal has the disease. '
+                                                                                           '\n \n You must provide '
+                                                                                           'data for every disease '
+                                                                                           'and every sign. This'
+                                                                                           'is the case as without '
+                                                                                           'every disease and sign '
+                                                                                           'being considered, '
+                                                                                           'the algorithm\'s will'
+                                                                                           'not work correctly.',
+                                                               example={"Anthrax": {"Anae": 0.025, "Anrx": 0.8813,
+                                                                                    "Atax": 0.025, "Const": 0.0563,
+                                                                                    "Diarr": 0.025, "Dysnt": 0.025,
+                                                                                    "Dyspn": 0.1188, "Icter": 0.025,
+                                                                                    "Lymph": 0.0875, "Pyrx": 0.9438,
+                                                                                    "SV_Oedm": 0.0563, "Stare": 0.7625,
+                                                                                    "Stunt": 0.025, "Weak": 0.175,
+                                                                                    "Wght_L": 0.0563},
+                                                                        "Babesiosis": {"Anae": 0.9438, "Anrx": 0.7938,
+                                                                                       "Atax": 0.0563, "Const": 0.0563,
+                                                                                       "Diarr": 0.025, "Dysnt": 0.025,
+                                                                                       "Dyspn": 0.5, "Icter": 0.8813,
+                                                                                       "Lymph": 0.325, "Pyrx": 0.9125,
+                                                                                       "SV_Oedm": 0.025,
+                                                                                       "Stare": 0.7625, "Stunt": 0.0875,
+                                                                                       "Weak": 0.8813,
+                                                                                       "Wght_L": 0.5875},
+                                                                        "Blackleg": {"Anae": 0.0563, "Anrx": 0.9438,
+                                                                                     "Atax": 0.025, "Const": 0.15,
+                                                                                     "Diarr": 0.025, "Dysnt": 0.025,
+                                                                                     "Dyspn": 0.0563, "Icter": 0.025,
+                                                                                     "Lymph": 0.4125, "Pyrx": 0.9125,
+                                                                                     "SV_Oedm": 0.025, "Stare": 0.825,
+                                                                                     "Stunt": 0.0563, "Weak": 0.7938,
+                                                                                     "Wght_L": 0.0875},
+                                                                        "CBPP": {"Anae": 0.0875, "Anrx": 0.9125,
+                                                                                 "Atax": 0.025, "Const": 0.025,
+                                                                                 "Diarr": 0.025, "Dysnt": 0.025,
+                                                                                 "Dyspn": 0.975, "Icter": 0.0563,
+                                                                                 "Lymph": 0.5, "Pyrx": 0.9125,
+                                                                                 "SV_Oedm": 0.0563, "Stare": 0.8813,
+                                                                                 "Stunt": 0.675, "Weak": 0.9125,
+                                                                                 "Wght_L": 0.9125},
+                                                                        "Colibacillosis": {"Anae": 0.1188,
+                                                                                           "Anrx": 0.9438,
+                                                                                           "Atax": 0.0563,
+                                                                                           "Const": 0.025,
+                                                                                           "Diarr": 0.975,
+                                                                                           "Dysnt": 0.825,
+                                                                                           "Dyspn": 0.025,
+                                                                                           "Icter": 0.0563,
+                                                                                           "Lymph": 0.175,
+                                                                                           "Pyrx": 0.9125,
+                                                                                           "SV_Oedm": 0.025,
+                                                                                           "Stare": 0.7938,
+                                                                                           "Stunt": 0.6188,
+                                                                                           "Weak": 0.9438,
+                                                                                           "Wght_L": 0.9125},
+                                                                        "Cowdriosis": {"Anae": 0.325, "Anrx": 0.7938,
+                                                                                       "Atax": 0.975, "Const": 0.0875,
+                                                                                       "Diarr": 0.175, "Dysnt": 0.025,
+                                                                                       "Dyspn": 0.675, "Icter": 0.0563,
+                                                                                       "Lymph": 0.5875, "Pyrx": 0.9125,
+                                                                                       "SV_Oedm": 0.025,
+                                                                                       "Stare": 0.7625, "Stunt": 0.2938,
+                                                                                       "Weak": 0.8813, "Wght_L": 0.5},
+                                                                        "FMD": {"Anae": 0.7938, "Anrx": 0.325,
+                                                                                "Atax": 0.025, "Const": 0.2938,
+                                                                                "Diarr": 0.5, "Dysnt": 0.025,
+                                                                                "Dyspn": 0.025, "Icter": 0.675,
+                                                                                "Lymph": 0.025, "Pyrx": 0.025,
+                                                                                "SV_Oedm": 0.9438, "Stare": 0.8813,
+                                                                                "Stunt": 0.7063, "Weak": 0.9125,
+                                                                                "Wght_L": 0.9438},
+                                                                        "Fasciolosis": {"Anae": 0.2639, "Anrx": 0.9056,
+                                                                                        "Atax": 0.3694, "Const": 0.05,
+                                                                                        "Diarr": 0.1722,
+                                                                                        "Dysnt": 0.0778,
+                                                                                        "Dyspn": 0.2111,
+                                                                                        "Icter": 0.1444,
+                                                                                        "Lymph": 0.5667, "Pyrx": 0.9333,
+                                                                                        "SV_Oedm": 0.05,
+                                                                                        "Stare": 0.8917,
+                                                                                        "Stunt": 0.3278, "Weak": 0.8667,
+                                                                                        "Wght_L": 0.775},
+                                                                        "LSD": {"Anae": 0.1861, "Anrx": 0.8917,
+                                                                                "Atax": 0.025, "Const": 0.025,
+                                                                                "Diarr": 0.1194, "Dysnt": 0.2528,
+                                                                                "Dyspn": 0.3306, "Icter": 0.1056,
+                                                                                "Lymph": 0.825, "Pyrx": 0.8667,
+                                                                                "SV_Oedm": 0.01, "Stare": 0.8917,
+                                                                                "Stunt": 0.025, "Weak": 0.8389,
+                                                                                "Wght_L": 0.55},
+                                                                        "Lungworm": {"Anae": 0.3556, "Anrx": 0.3694,
+                                                                                     "Atax": 0.0917, "Const": 0.0917,
+                                                                                     "Diarr": 0.2111, "Dysnt": 0.1306,
+                                                                                     "Dyspn": 0.8667, "Icter": 0.0528,
+                                                                                     "Lymph": 0.1861, "Pyrx": 0.225,
+                                                                                     "SV_Oedm": 0.275, "Stare": 0.5667,
+                                                                                     "Stunt": 0.1, "Weak": 0.5139,
+                                                                                     "Wght_L": 0.7083},
+                                                                        "PGE / GIT parasite": {"Anae": 0.7063,
+                                                                                               "Anrx": 0.5,
+                                                                                               "Atax": 0.025,
+                                                                                               "Const": 0.2063,
+                                                                                               "Diarr": 0.7938,
+                                                                                               "Dysnt": 0.325,
+                                                                                               "Dyspn": 0.175,
+                                                                                               "Icter": 0.025,
+                                                                                               "Lymph": 0.025,
+                                                                                               "Pyrx": 0.0563,
+                                                                                               "SV_Oedm": 0.675,
+                                                                                               "Stare": 0.9438,
+                                                                                               "Stunt": 0.9438,
+                                                                                               "Weak": 0.9125,
+                                                                                               "Wght_L": 0.9438},
+                                                                        "Pasteurollosis": {"Anae": 0.0563,
+                                                                                           "Anrx": 0.9125,
+                                                                                           "Atax": 0.025,
+                                                                                           "Const": 0.025,
+                                                                                           "Diarr": 0.025,
+                                                                                           "Dysnt": 0.025,
+                                                                                           "Dyspn": 0.975,
+                                                                                           "Icter": 0.025,
+                                                                                           "Lymph": 0.4125,
+                                                                                           "Pyrx": 0.9438,
+                                                                                           "SV_Oedm": 0.85,
+                                                                                           "Stare": 0.7063,
+                                                                                           "Stunt": 0.5, "Weak": 0.9125,
+                                                                                           "Wght_L": 0.9125},
+                                                                        "Rabies": {"Anae": 0.025, "Anrx": 0.9125,
+                                                                                   "Atax": 0.325, "Const": 0.175,
+                                                                                   "Diarr": 0.025, "Dysnt": 0.025,
+                                                                                   "Dyspn": 0.2938, "Icter": 0.025,
+                                                                                   "Lymph": 0.025, "Pyrx": 0.4125,
+                                                                                   "SV_Oedm": 0.025, "Stare": 0.175,
+                                                                                   "Stunt": 0.025, "Weak": 0.0563,
+                                                                                   "Wght_L": 0.0563},
+                                                                        "Trypanosomosis": {"Anae": 0.9125,
+                                                                                           "Anrx": 0.7938,
+                                                                                           "Atax": 0.025,
+                                                                                           "Const": 0.0875,
+                                                                                           "Diarr": 0.2063,
+                                                                                           "Dysnt": 0.025,
+                                                                                           "Dyspn": 0.4125,
+                                                                                           "Icter": 0.0875,
+                                                                                           "Lymph": 0.975,
+                                                                                           "Pyrx": 0.5875,
+                                                                                           "SV_Oedm": 0.025,
+                                                                                           "Stare": 0.9125,
+                                                                                           "Stunt": 0.9125,
+                                                                                           "Weak": 0.9125,
+                                                                                           "Wght_L": 0.975},
+                                                                        "Tuberculosis": {"Anae": 0.2063, "Anrx": 0.325,
+                                                                                         "Atax": 0.025, "Const": 0.0563,
+                                                                                         "Diarr": 0.025, "Dysnt": 0.025,
+                                                                                         "Dyspn": 0.9438,
+                                                                                         "Icter": 0.025,
+                                                                                         "Lymph": 0.9438, "Pyrx": 0.5,
+                                                                                         "SV_Oedm": 0.025,
+                                                                                         "Stare": 0.8813,
+                                                                                         "Stunt": 0.8813,
+                                                                                         "Weak": 0.9125,
+                                                                                         "Wght_L": 0.9438},
+                                                                        "ZZ_Other": {"Anae": 0.7938, "Anrx": 0.1188,
+                                                                                     "Atax": 0.975, "Const": 0.9438,
+                                                                                     "Diarr": 0.8806, "Dysnt": 0.975,
+                                                                                     "Dyspn": 0.6694, "Icter": 0.9438,
+                                                                                     "Lymph": 0.5875, "Pyrx": 0.0875,
+                                                                                     "SV_Oedm": 0.95, "Stare": 0.175,
+                                                                                     "Stunt": 0.6722, "Weak": 0.1188,
+                                                                                     "Wght_L": 0.225}})})
 
 
 class getHelper:
@@ -168,6 +371,43 @@ class diagnosisHelper:
         return priors
 
     @staticmethod
+    # function which checks the data provided is valid and checks that the values of the likelihoods are always
+    # greater than 0 and less than 1
+    def validate_likelihoods(likelihoods, diseases, signs):
+        provided_keys = []
+        likelihoods = likelihoods
+        for key in likelihoods.keys():
+            if key not in diseases:
+                raise BadRequest(f"Disease '{key}' is not a valid disease.")
+            provided_keys.append(key)
+
+        for disease in diseases:
+            if disease not in provided_keys:
+                raise BadRequest(
+                    f"Missing '{disease}' in likelihoods. Please provide a likelihood value for all diseases.")
+
+        for disease in likelihoods:
+            current_likelihoods = likelihoods[disease]
+            provided_keys = []
+            for key in current_likelihoods.keys():
+                if key not in signs:
+                    raise BadRequest(f"Sign '{key}' is not a valid sign. Please use a valid sign from {signs}.")
+                provided_keys.append(key)
+
+            for sign in signs:
+                if sign not in provided_keys:
+                    raise BadRequest(
+                        f"Missing '{sign}' in likelihoods for disease '{disease}'. Please provide a likelihood value"
+                        f"for all signs.")
+
+            for sign in current_likelihoods:
+                if (not current_likelihoods[sign] > 0) or (current_likelihoods[sign] >= 1):
+                    raise BadRequest(f"Likelihood for sign '{sign}' in disease '{disease}' is not a valid value. "
+                                     f"Please use a value greater than 0 and less than 1.")
+
+        return likelihoods
+
+    @staticmethod
     def calculate_results(diseases, likelihoods, shown_signs, priors):
         results = {}
         for disease in diseases:
@@ -204,42 +444,235 @@ class diagnosisHelper:
 
 @api.route('/api/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'}, description='<h1>Description</h1>'
-                                                                                               '<p>This endpoint takes a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript'
-                                                                                               '/Objects/JSON">JSON</a> object containing the species of animal and a list of signs, '
-                                                                                               'and optionally a list of prior likelihood values. It'
-                                                                                               'then returns a list of diseases and their likelihood of being the cause of the signs.</p> \n \n  '
-                                                                                               '<p>The <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a'
-                                                                                               '> object must contain both "animal" and "signs" and can optionally contain "priors"</p> \n \n'
+                                                                                               '<p>This endpoint '
+                                                                                               'takes a <a '
+                                                                                               'href="https'
+                                                                                               '://developer.mozilla'
+                                                                                               '.org/en-US/docs/Learn'
+                                                                                               '/JavaScript'
+                                                                                               '/Objects/JSON">JSON'
+                                                                                               '</a> object '
+                                                                                               'containing the '
+                                                                                               'species of animal and '
+                                                                                               'a list of signs,'
+                                                                                               'and optionally a list '
+                                                                                               'of prior likelihood '
+                                                                                               'values. It'
+                                                                                               'then returns a list '
+                                                                                               'of diseases and their '
+                                                                                               'likelihood of being '
+                                                                                               'the cause of the '
+                                                                                               'signs.</p> \n \n'
+                                                                                               '<p>The <a '
+                                                                                               'href="https'
+                                                                                               '://developer.mozilla'
+                                                                                               '.org/en-US/docs/Learn'
+                                                                                               '/JavaScript/Objects'
+                                                                                               '/JSON">JSON</a'
+                                                                                               '> object must contain '
+                                                                                               'both "animal" and '
+                                                                                               '"signs" and can '
+                                                                                               'optionally contain '
+                                                                                               '"priors"</p> \n \n'
                                                                                                '<h1> Parameters</h1>'
-                                                                                               '<p>animal:  You can use the '
-                                                                                               '/api/data/valid_animals GET method to find out which animals are available for diagnosis.</p> '
+                                                                                               '<p>animal:  You can '
+                                                                                               'use the'
+                                                                                               '/api/data'
+                                                                                               '/valid_animals GET '
+                                                                                               'method to find out '
+                                                                                               'which animals are '
+                                                                                               'available for '
+                                                                                               'diagnosis.</p>'
                                                                                                '\n \n'
-                                                                                               '<p>signs\': \'All signs detailed in the GET method '
-                                                                                               '/api/data/full_sign_data/\'animal\' '
-                                                                                               'must be included. The data must be formatted as a <a '
-                                                                                               'href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object, '
-                                                                                               'the key must be a string and the value'
+                                                                                               '<p>signs\': \'All '
+                                                                                               'signs detailed in the '
+                                                                                               'GET method'
+                                                                                               '/api/data'
+                                                                                               '/full_sign_data'
+                                                                                               '/\'animal\''
+                                                                                               'must be included. The '
+                                                                                               'data must be '
+                                                                                               'formatted as a <a '
+                                                                                               'href="https'
+                                                                                               '://developer.mozilla'
+                                                                                               '.org/en-US/docs/Learn'
+                                                                                               '/JavaScript/Objects'
+                                                                                               '/JSON">JSON</a> object,'
+                                                                                               'the key must be a '
+                                                                                               'string and the value'
                                                                                                'of each'
-                                                                                               'sign must be 1 0, or -1. 1 means the sign is present, 0 means the sign is not '
-                                                                                               'observed, but may still be present, and -1 means the sign is not present.</p> \n \n'
-                                                                                               '<p>priors: This is an optional parameter which does not need to be passed in the payload. '
-                                                                                               'It is used to alter the prior likelihoods of diseases occurring which '
-                                                                                               'influences the outcome of the Bayes algorithm. If this is not included, the algorithm assumes '
-                                                                                               'equal prior likelihoods. The list of diseases and their prior likelihoods must add up to 100. '
-                                                                                               'Data for the required parameters can be returned by the GET Method at '
-                                                                                               '/api/data/full_disease_data/\'animal\''
-                                                                                               'which returns each disease as the key and the corresponding <a '
-                                                                                               'href="https://www.wikidata.org/">WikiData ID</a> as the value. </p>\n \n'
-
-                                                                                               '\n \n <h1> Example <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects'
+                                                                                               'sign must be 1 0, or '
+                                                                                               '-1. 1 means the sign '
+                                                                                               'is present, '
+                                                                                               '0 means the sign is not'
+                                                                                               'observed, but may '
+                                                                                               'still be present, '
+                                                                                               'and -1 means the sign '
+                                                                                               'is not present.</p> '
+                                                                                               '\n \n'
+                                                                                               '<p>priors: This is an '
+                                                                                               'optional parameter '
+                                                                                               'which does not need '
+                                                                                               'to be passed in the '
+                                                                                               'payload.'
+                                                                                               'It is used to alter '
+                                                                                               'the prior likelihoods '
+                                                                                               'of diseases occurring '
+                                                                                               'which'
+                                                                                               'influences the '
+                                                                                               'outcome of the Bayes '
+                                                                                               'algorithm. If this is '
+                                                                                               'not included, '
+                                                                                               'the algorithm assumes'
+                                                                                               'equal prior '
+                                                                                               'likelihoods. The list '
+                                                                                               'of diseases and their '
+                                                                                               'prior likelihoods '
+                                                                                               'must add up to 100.'
+                                                                                               'Data for the required '
+                                                                                               'parameters can be '
+                                                                                               'returned by the GET '
+                                                                                               'Method at'
+                                                                                               '/api/data'
+                                                                                               '/full_disease_data'
+                                                                                               '/\'animal\''
+                                                                                               'which returns each '
+                                                                                               'disease as the key '
+                                                                                               'and the corresponding '
+                                                                                               '<a '
+                                                                                               'href="https://www'
+                                                                                               '.wikidata.org'
+                                                                                               '/">WikiData ID</a> as '
+                                                                                               'the value. </p>\n \n'
+                                                                                               'likelihoods: '
+                                                                                               'This is an optional '
+                                                                                               'parameter which does '
+                                                                                               'not need to be passed '
+                                                                                               'in the payload. It is '
+                                                                                               'used to alter the '
+                                                                                               'likelihoods of '
+                                                                                               'signs being present '
+                                                                                               'for each disease. If '
+                                                                                               'this is not included, '
+                                                                                               'the algorithm assumes '
+                                                                                               'equal likelihoods. The '
+                                                                                               'list of diseases and '
+                                                                                               'their likelihoods must '
+                                                                                               'only contain values '
+                                                                                               'between 0 and 1, '
+                                                                                               'non-inclusive. Data '
+                                                                                               'for the required '
+                                                                                               'parameters can be '
+                                                                                               'returned by the GET '
+                                                                                               'Method at'
+                                                                                               '/api/data'
+                                                                                               '/matrix/\'animal\''
+                                                                                               'which returns the '
+                                                                                               'default matrix the '
+                                                                                               'Bayesian algorithm '
+                                                                                               'uses.</p> \n \n'
+                                                                                               'WARNING: Providing '
+                                                                                               'your own likelihoods '
+                                                                                               'and priors can '
+                                                                                               'result in the '
+                                                                                               'algorithm returning '
+                                                                                               'incorrect results. '
+                                                                                               'Use this feature with '
+                                                                                               'caution if the values '
+                                                                                               'you provide are '
+                                                                                               'not provided'
+                                                                                               'from research. </p> '
+                                                                                               '\n \n'
+                                                                                               '\n \n <h1> Example <a '
+                                                                                               'href="https'
+                                                                                               '://developer.mozilla'
+                                                                                               '.org/en-US/docs/Learn'
+                                                                                               '/JavaScript/Objects'
                                                                                                '/JSON">JSON</a>'
-                                                                                               ' object:</h1> \n \n  {\n"animal": "Cattle", \n\"signs\": {\"Anae\": 0, \"Anrx\": 1, \"Atax\": 0, '
-                                                                                               '\"Const\": 0, \"Diarr\": 0, \"Dysnt\": 1, \"Dyspn\": 0, \"Icter\": 0, \"Lymph\": -1, '
-                                                                                               '\"Pyrx\": 0, \"Stare\": 0, \"Stunt\": 0, \"SV_Oedm\": 1, \"Weak\": 0, \"Wght_L\": 0}, '
-                                                                                               '\n \"priors\": { \"Anthrax\": 5, \"Babesiosis\": 5, \"Blackleg\": 5, \"CBPP\": 5, '
-                                                                                               '\"Colibacillosis\": 5, \"Cowdriosis\": 5,\"FMD\": 5,\"Fasciolosis\": 5,\"LSD\": 5,\"Lungworm\": '
-                                                                                               '25,\"Pasteurollosis\": 5,\"PGE / GIT parasite\": 5,\"Rabies\": 5,\"Trypanosomosis\": 5,'
-                                                                                               '\"Tuberculosis\": 5,\"ZZ_Other\": 5}\n}')
+                                                                                               ' object:</h1> \n \n  {'
+                                                                                               '\n"animal": "Cattle", '
+                                                                                               '\n\"signs\": {'
+                                                                                               '"Anae": 0, '
+                                                                                               '\"Anrx\": 1, '
+                                                                                               '\"Atax\": 0,'
+                                                                                               '\"Const\": 0, '
+                                                                                               '\"Diarr\": 0, '
+                                                                                               '\"Dysnt\": 1, '
+                                                                                               '\"Dyspn\": 0, '
+                                                                                               '\"Icter\": 0, '
+                                                                                               '\"Lymph\": -1,'
+                                                                                               '\"Pyrx\": 0, '
+                                                                                               '\"Stare\": 0, '
+                                                                                               '\"Stunt\": 0, '
+                                                                                               '\"SV_Oedm\": 1, '
+                                                                                               '\"Weak\": 0, '
+                                                                                               '\"Wght_L\": 0},'
+                                                                                               '\n \"priors\": { '
+                                                                                               '\"Anthrax\": 5, '
+                                                                                               '\"Babesiosis\": 5, '
+                                                                                               '\"Blackleg\": 5, '
+                                                                                               '\"CBPP\": 5,'
+                                                                                               '\"Colibacillosis\": '
+                                                                                               '5, \"Cowdriosis\": 5,'
+                                                                                               '\"FMD\": 5,'
+                                                                                               '\"Fasciolosis\": 5,'
+                                                                                               '\"LSD\": 5,'
+                                                                                               '\"Lungworm\":'
+                                                                                               '25,\"Pasteurollosis'
+                                                                                               '\": 5,\"PGE / GIT '
+                                                                                               'parasite\": 5,'
+                                                                                               '\"Rabies\": 5,'
+                                                                                               '\"Trypanosomosis\": 5,'
+                                                                                               '\"Tuberculosis\": 5,'
+                                                                                               '\"ZZ_Other\": 5},\n'
+                                                                                               '"likelihoods" : {"Anthrax": {"Anae": 0.025, "Anrx": 0.8813, "Atax": 0.025, "Const": 0.0563, "Diarr": 0.025, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.1188, "Icter": 0.025, "Lymph": 0.0875, "Pyrx": 0.9438, "SV_Oedm": 0.0563, "Stare": 0.7625, '
+                                                                                               '"Stunt": 0.025, "Weak": 0.175, "Wght_L": 0.0563},'
+                                                                                               '"Babesiosis": {"Anae": 0.9438, "Anrx": 0.7938, "Atax": 0.0563, "Const": 0.0563, "Diarr": 0.025, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.5, "Icter": 0.8813, "Lymph": 0.325, "Pyrx": 0.9125, "SV_Oedm": 0.025, "Stare": 0.7625, '
+                                                                                               '"Stunt": 0.0875, "Weak": 0.8813, "Wght_L": 0.5875}, '
+                                                                                               '"Blackleg": {"Anae": 0.0563, "Anrx": 0.9438, "Atax": 0.025, "Const": 0.15, "Diarr": 0.025, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.0563, "Icter": 0.025, "Lymph": 0.4125, "Pyrx": 0.9125, "SV_Oedm": 0.025, "Stare": 0.825,    '
+                                                                                               '"Stunt": 0.0563, "Weak": 0.7938, "Wght_L": 0.0875},    '
+                                                                                               '"CBPP": {"Anae": 0.0875, "Anrx": 0.9125, "Atax": 0.025, "Const": 0.025, "Diarr": 0.025, "Dysnt": 0.025,    '
+                                                                                               '"Dyspn": 0.975, "Icter": 0.0563, "Lymph": 0.5, "Pyrx": 0.9125, "SV_Oedm": 0.0563, "Stare": 0.8813,   '
+                                                                                               '"Stunt": 0.675, "Weak": 0.9125, "Wght_L": 0.9125},   '
+                                                                                               '"Colibacillosis": {"Anae": 0.1188, "Anrx": 0.9438, "Atax": 0.0563, "Const": 0.025, "Diarr": 0.975, "Dysnt": 0.825, '
+                                                                                               '"Dyspn": 0.025, "Icter": 0.0563, "Lymph": 0.175, "Pyrx": 0.9125, "SV_Oedm": 0.025, "Stare": 0.7938,'
+                                                                                               '"Stunt": 0.6188, "Weak": 0.9438, "Wght_L": 0.9125}, '
+                                                                                               '"Cowdriosis": {"Anae": 0.325, "Anrx": 0.7938, "Atax": 0.975, "Const": 0.0875, "Diarr": 0.175, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.675, "Icter": 0.0563, "Lymph": 0.5875, "Pyrx": 0.9125, "SV_Oedm": 0.025, "Stare": 0.7625,'
+                                                                                               '"Stunt": 0.2938, "Weak": 0.8813, "Wght_L": 0.5},'
+                                                                                               '"FMD": {"Anae": 0.7938, "Anrx": 0.325, "Atax": 0.025, "Const": 0.2938, "Diarr": 0.5, "Dysnt": 0.025, "Dyspn": 0.025,'
+                                                                                               '"Icter": 0.675, "Lymph": 0.025, "Pyrx": 0.025, "SV_Oedm": 0.9438, "Stare": 0.8813, "Stunt": 0.7063,'
+                                                                                               '"Weak": 0.9125, "Wght_L": 0.9438},'
+                                                                                               '"Fasciolosis": {"Anae": 0.2639, "Anrx": 0.9056, "Atax": 0.3694, "Const": 0.05, "Diarr": 0.1722, "Dysnt": 0.0778,'
+                                                                                               '"Dyspn": 0.2111, "Icter": 0.1444, "Lymph": 0.5667, "Pyrx": 0.9333, "SV_Oedm": 0.05, "Stare": 0.8917,'
+                                                                                               '"Stunt": 0.3278, "Weak": 0.8667, "Wght_L": 0.775},'
+                                                                                               '"LSD": {"Anae": 0.1861, "Anrx": 0.8917, "Atax": 0.025, "Const": 0.025, "Diarr": 0.1194, "Dysnt": 0.2528,'
+                                                                                               '"Dyspn": 0.3306, "Icter": 0.1056, "Lymph": 0.825, "Pyrx": 0.8667, "SV_Oedm": 0.01, "Stare": 0.8917, '
+                                                                                               '"Stunt": 0.025, "Weak": 0.8389, "Wght_L": 0.55}, '
+                                                                                               '"Lungworm": {"Anae": 0.3556, "Anrx": 0.3694, "Atax": 0.0917, "Const": 0.0917, "Diarr": 0.2111, "Dysnt": 0.1306, '
+                                                                                               '"Dyspn": 0.8667, "Icter": 0.0528, "Lymph": 0.1861, "Pyrx": 0.225, "SV_Oedm": 0.275, "Stare": 0.5667, '
+                                                                                               '"Stunt": 0.1, "Weak": 0.5139, "Wght_L": 0.7083}, '
+                                                                                               '"PGE / GIT parasite": {"Anae": 0.7063, "Anrx": 0.5, "Atax": 0.025, "Const": 0.2063, "Diarr": 0.7938, "Dysnt": 0.325, '
+                                                                                               '"Dyspn": 0.175, "Icter": 0.025, "Lymph": 0.025, "Pyrx": 0.0563, "SV_Oedm": 0.675, "Stare": 0.9438, '
+                                                                                               '"Stunt": 0.9438, "Weak": 0.9125, "Wght_L": 0.9438}, '
+                                                                                               '"Pasteurollosis": {"Anae": 0.0563, "Anrx": 0.9125, "Atax": 0.025, "Const": 0.025, "Diarr": 0.025, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.975, "Icter": 0.025, "Lymph": 0.4125, "Pyrx": 0.9438, "SV_Oedm": 0.85, "Stare": 0.7063, "Stunt": 0.5,  '
+                                                                                               '"Weak": 0.9125, "Wght_L": 0.9125}, '
+                                                                                               '"Rabies": {"Anae": 0.025, "Anrx": 0.9125, "Atax": 0.325, "Const": 0.175, "Diarr": 0.025, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.2938, "Icter": 0.025, "Lymph": 0.025, "Pyrx": 0.4125, "SV_Oedm": 0.025, "Stare": 0.175, '
+                                                                                               '"Stunt": 0.025, "Weak": 0.0563, "Wght_L": 0.0563}, '
+                                                                                               '"Trypanosomosis": {"Anae": 0.9125, "Anrx": 0.7938, "Atax": 0.025, "Const": 0.0875, "Diarr": 0.2063, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.4125, "Icter": 0.0875, "Lymph": 0.975, "Pyrx": 0.5875, "SV_Oedm": 0.025, "Stare": 0.9125, '
+                                                                                               '"Stunt": 0.9125, "Weak": 0.9125, "Wght_L": 0.975}, '
+                                                                                               '"Tuberculosis": {"Anae": 0.2063, "Anrx": 0.325, "Atax": 0.025, "Const": 0.0563, "Diarr": 0.025, "Dysnt": 0.025, '
+                                                                                               '"Dyspn": 0.9438, "Icter": 0.025, "Lymph": 0.9438, "Pyrx": 0.5, "SV_Oedm": 0.025, "Stare": 0.8813, '
+                                                                                               '"Stunt": 0.8813, "Weak": 0.9125, "Wght_L": 0.9438}, '
+                                                                                               '"ZZ_Other": {"Anae": 0.7938, "Anrx": 0.1188, "Atax": 0.975, "Const": 0.9438, "Diarr": 0.8806, "Dysnt": 0.975, '
+                                                                                               '"Dyspn": 0.6694, "Icter": 0.9438, "Lymph": 0.5875, "Pyrx": 0.0875, "SV_Oedm": 0.95, "Stare": 0.175, '
+                                                                                               '"Stunt": 0.6722, "Weak": 0.1188, "Wght_L": 0.225}\n \t }\n } ')
 class diagnose(Resource):
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
@@ -266,12 +699,24 @@ class diagnose(Resource):
             # If the animal is invalid, raise an error
             raise BadRequest(f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
 
-        # Get the correct data from the data Excel sheet
-        likelihoods: Dict[str, Dict[str, float]] = self.gh.get_likelihood_data(animal)
         # Get the list of diseases
         diseases: List[str] = self.gh.get_diseases(animal)
         # Get the list of wiki ids
         wiki_ids: Dict[str, str] = self.gh.get_disease_wiki_ids(animal)
+
+        if data.get('likelihoods') is not None:
+            # Check if the likelihoods are valid
+            if not self.dh.validate_likelihoods(data['likelihoods'], diseases, self.gh.get_signs(animal)):
+                # If the likelihoods are invalid, raise an error
+                raise BadRequest(f'Invalid likelihoods: {data["likelihoods"]}. Please use valid likelihoods from '
+                                 f'/api/data/valid_likelihoods/{animal}.')
+
+        # Get the prior likelihoods from the API request data
+        likelihoods: Dict[str, Dict[str, float]] = data.get('likelihoods')
+
+        # If the likelihoods are not included in the request, get them from the data Excel sheet
+        if likelihoods is None:
+            likelihoods: Dict[str, Dict[str, float]] = self.gh.get_likelihood_data(animal)
 
         # Grab the list of signs from the API request data
         shown_signs: Dict[str, int] = data['signs']
@@ -300,18 +745,17 @@ class diagnose(Resource):
 @api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'},
          params={'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid '
                            'animal as returned by /api/data/valid_animals. \n \n'}, description='<h1>Description</h1>'
-                                                                                                '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript'
-                                                                                                '/Objects/JSON">JSON</a> object containing diagnosable diseases with their corresponding <a '
-                                                                                                'href="https://www.wikidata.org/">WikiData IDs</a> as well as the valid'
-                                                                                                'signs associated with the animal, their full medical terminology in English, and their '
+                                                                                                '<p>This endpoint returns a '
+                                                                                                '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object '
+                                                                                                'containing diagnosable diseases with their corresponding '
+                                                                                                '<a href="https://www.wikidata.org/">WikiData IDs</a> as well as the valid signs '
+                                                                                                'associated with the animal, their full medical terminology in English, and their'
                                                                                                 'corresponding <a href="https://www.wikidata.org/">WikiData IDs</a> (if they exist).</p>'
                                                                                                 '<h1>URL Parameters</h1>'
                                                                                                 '<ul>'
-                                                                                                '<li><p>animal: The species of animal you wish to retrieve signs and diseases for. This must be '
-                                                                                                'a valid'
-                                                                                                'animal as returned by /api/data/valid_animals. </p></li>'
-                                                                                                '</ul>'
-                                                                                                '\n \n ')
+                                                                                                '<li><p>animal: The species of animal you wish to retrieve signs and diseases for. This must be'
+                                                                                                'a valid animal as returned by /api/data/valid_animals. </p></li>'
+                                                                                                '</ul>\n \n ')
 class getRequiredInputData(Resource):
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
@@ -327,8 +771,7 @@ class getRequiredInputData(Resource):
             {'diseases': self.gh.get_disease_wiki_ids(animal), 'signs': self.gh.get_sign_names_and_codes(animal)})
 
 
-@api.route('/api/matrix/<string:animal>')
-@api.hide
+@api.route('/api/data/matrix/<string:animal>')
 class getDiseaseSignMatrix(Resource):
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
@@ -340,7 +783,7 @@ class getDiseaseSignMatrix(Resource):
         # Check if the animal is valid
         if animal not in getAnimals().get().get_json():
             # If the animal is invalid, raise an error
-            raise BadRequest('Invalid animal: %s. Please use a valid animal from /api/data/valid_animals.' % animal)
+            raise BadRequest(f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
         # Get the correct data from the data Excel sheet
         data = self.gh.get_likelihood_data(animal)
         # Return the data
@@ -349,9 +792,13 @@ class getDiseaseSignMatrix(Resource):
 
 @api.route('/api/data/valid_animals')
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument'}, description='<h1>Description</h1>'
-                                                                     '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript'
-                                                                     '/Objects/JSON">JSON</a> object containing the names of animal species which are available for '
-                                                                     'diagnosis in the /api/diagnose POST method below. </p>\n')
+                                                                     '<p>This endpoint returns a <a '
+                                                                     'href="https://developer.mozilla.org/en-US/docs'
+                                                                     '/Learn/JavaScript'
+                                                                     '/Objects/JSON">JSON</a> object containing the '
+                                                                     'names of animal species which are available for'
+                                                                     'diagnosis in the /api/diagnose POST method '
+                                                                     'below. </p>\n')
 class getAnimals(Resource):
     @staticmethod
     def get():
@@ -363,16 +810,27 @@ class getAnimals(Resource):
 
 @api.route('/api/data/full_sign_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, description='<h1>Description</h1>'
-                                                                                    '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript'
-                                                                                    '/Objects/JSON">JSON</a> object which contains the full medical terminology for each sign'
+                                                                                    '<p>This endpoint returns a <a '
+                                                                                    'href="https://developer.mozilla'
+                                                                                    '.org/en-US/docs/Learn/JavaScript'
+                                                                                    '/Objects/JSON">JSON</a> object '
+                                                                                    'which contains the full medical '
+                                                                                    'terminology for each sign'
                                                                                     ' in English as '
-                                                                                    'well as the corresponding <a href="https://www.wikidata.org/">WikiData IDs</a> for the signs ('
+                                                                                    'well as the corresponding <a '
+                                                                                    'href="https://www.wikidata.org'
+                                                                                    '/">WikiData IDs</a> for the '
+                                                                                    'signs ('
                                                                                     'if they exist).</p>'
                                                                                     '<h1>URL Parameters</h1>'
                                                                                     '<ul>'
-                                                                                    '<li><p>animal: The species of animal you wish to retrieve signs and diseases for. This must be '
+                                                                                    '<li><p>animal: The species of '
+                                                                                    'animal you wish to retrieve '
+                                                                                    'signs and diseases for. This '
+                                                                                    'must be'
                                                                                     'a valid'
-                                                                                    'animal as returned by /api/data/valid_animals.</p></li>'
+                                                                                    'animal as returned by '
+                                                                                    '/api/data/valid_animals.</p></li>'
                                                                                     '</ul>',
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by /api/data/valid_animals. \n \n '})
@@ -394,15 +852,25 @@ class getSignCodesAndTerminology(Resource):
 
 @api.route('/api/data/full_disease_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Invalid Argument'}, description='<h1>Description</h1>'
-                                                                                    '<p>This endpoint returns a <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript'
-                                                                                    '/Objects/JSON">JSON</a> object which contains the possible diseases for the given animal as'
-                                                                                    'well as the corresponding <a href="https://www.wikidata.org/">WikiData IDs</a> (if they '
+                                                                                    '<p>This endpoint returns a <a '
+                                                                                    'href="https://developer.mozilla'
+                                                                                    '.org/en-US/docs/Learn/JavaScript'
+                                                                                    '/Objects/JSON">JSON</a> object '
+                                                                                    'which contains the possible '
+                                                                                    'diseases for the given animal as'
+                                                                                    'well as the corresponding <a '
+                                                                                    'href="https://www.wikidata.org'
+                                                                                    '/">WikiData IDs</a> (if they'
                                                                                     'exist).</p>'
                                                                                     '<h1>URL Parameters</h1>'
                                                                                     '<ul>'
-                                                                                    '<li><p>animal: The species of animal you wish to retrieve signs and diseases for. This must be '
+                                                                                    '<li><p>animal: The species of '
+                                                                                    'animal you wish to retrieve '
+                                                                                    'signs and diseases for. This '
+                                                                                    'must be'
                                                                                     'a valid'
-                                                                                    'animal as returned by /api/data/valid_animals.</p></li>'
+                                                                                    'animal as returned by '
+                                                                                    '/api/data/valid_animals.</p></li>'
                                                                                     '</ul>',
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by'
