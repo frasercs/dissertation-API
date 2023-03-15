@@ -779,18 +779,18 @@ class getRequiredInputData(Resource):
 
 
 @api.route('/api/data/matrix/<string:animal>')
-@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'},
-            params={'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
-                            'animal as returned by /api/data/valid_animals. \n \n'}, description='<h1>Description</h1>'
-                                                                                                '<p>This endpoint returns a '
-                                                                                                '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object '
-                                                                                                'containing the disease-sign Bayesian matrix for the given animal. This matrix contains the likelihoods '
-                                                                                                'of each sign being present for each disease.</p>'
-                                                                                                '<h1>URL Parameters</h1>'
-                                                                                                '<ul>'
-                                                                                                '<li><p>animal: The species of animal you wish to retrieve the disease-sign matrix for. This must be '
-                                                                                                'a valid animal as returned by /api/data/valid_animals. </p></li>'
-                                                                                                '</ul>\n \n ')
+@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
+    'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
+              'animal as returned by /api/data/valid_animals. \n \n'}, description='<h1>Description</h1>'
+                                                                                   '<p>This endpoint returns a '
+                                                                                   '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object '
+                                                                                   'containing the disease-sign Bayesian matrix for the given animal. This matrix contains the likelihoods '
+                                                                                   'of each sign being present for each disease.</p>'
+                                                                                   '<h1>URL Parameters</h1>'
+                                                                                   '<ul>'
+                                                                                   '<li><p>animal: The species of animal you wish to retrieve the disease-sign matrix for. This must be '
+                                                                                   'a valid animal as returned by /api/data/valid_animals. </p></li>'
+                                                                                   '</ul>\n \n ')
 class getDiseaseSignMatrix(Resource):
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
