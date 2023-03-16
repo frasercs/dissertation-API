@@ -484,6 +484,7 @@ class diagnose(Resource):
 
         return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
+
 @api.hide
 @api.route('/api/custom_diagnose', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'},
@@ -528,8 +529,8 @@ class diagnose(Resource):
                      '"likelihoods": {"Rabies": {"Fever": 0.6, "Cough": 0.1, "Diarrhoea": 0.1},"Cold": '
                      '{"Fever": 0.9,"Cough": 0.9,"Diarrhoea": 0.1}},\n '
                      '"priors": {"Rabies": 20,"Cold": 80 },\n "animal": "Cat" \n}')
-
 class custom_diagnose(Resource):
+
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
         self.dh = diagnosisHelper()
