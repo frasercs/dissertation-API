@@ -451,28 +451,28 @@ class diagnose(Resource):
             likelihoods: Dict[str, Dict[str, float]] = self.gh.get_likelihood_data(animal)
         # Grab the list of signs from the API request data
         shown_signs: Dict[str, int] = data['signs']
+        # Check if the signs are all valid and all required signs are present
         if set(shown_signs.keys()) != set(valid_signs):
             raise BadRequest(
                 f'Invalid signs: {list(set(shown_signs.keys()) - set(valid_signs))}. '
                 f'Please use valid sign from /api/data/valid_signs/{animal}.')
-
         valid_sign_values = [0, 1, -1]
         # Check if the signs values are all valid
         for x, value in enumerate(shown_signs.values()):
             if value not in valid_sign_values:
                 sign = list(shown_signs.keys())[x]
                 raise BadRequest(f'Error with value of {sign}: {value}. Sign values must be either -1, 0 or 1')
-
         # Grab the priors from the API request data (if they exist)
-        priors: Dict[str, float] = data.get('priors')
-        if priors is not None:
-            priors = self.dh.validate_priors(priors, diseases)
+        if data.get('priors') is not None:
+            priors = self.dh.validate_priors(data.get('priors'), diseases)
         else:
+            # If the priors are not included in the API request data, generate default, equal priors
             priors = self.dh.get_default_priors(diseases)
-
+        # Calculate the results
         results: Dict[str, float] = self.dh.calculate_results(diseases, likelihoods, shown_signs, priors)
+        # Normalise the results
         normalised_results: Dict[str, float] = self.dh.normalise(results)
-
+        # Return the results with the valid WikiData IDs if they exist
         return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
 
