@@ -429,41 +429,32 @@ class diagnose(Resource):
 
         # Get the data from the API request
         data: [str, Union[str, Dict[str, int], None]] = request.get_json()
-        # Grab the species of animal it is from the API request data
+        # Grab the species of animal it is from the API request data and capitalize it
         animal: str = data['animal'].capitalize()
-
-        # Capitalise the first letter of the animal to ensure input matches syntax used in sheets
-
+        # Get the list of valid animals
         valid_animals: List[str] = getAnimals().get().get_json()
-
-        # Check if the animal is valid
+        # Check if the provided animal is valid for the model
         if animal not in valid_animals:
             # If the animal is invalid, raise an error
             raise BadRequest(f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
+        # Get the list of valid signs for the animal
         valid_signs = self.gh.get_signs(animal)
-
         # Get the list of diseases
         diseases: List[str] = self.gh.get_diseases(animal)
         # Get the list of wiki ids
         wiki_ids: Dict[str, str] = self.gh.get_disease_wiki_ids(animal)
-
+        # Check if the likelihoods are included in the API request data
         if data.get('likelihoods') is not None:
-            # Check if the likelihoods are valid
-            self.dh.validate_likelihoods(data['likelihoods'], diseases, valid_signs)
-
-        # Get the prior likelihoods from the API request data
-        likelihoods: Dict[str, Dict[str, float]] = data.get('likelihoods')
-
-        # If the likelihoods are not included in the request, get them from the data Excel sheet
-        if likelihoods is None:
+            # Check if the likelihoods are valid and if they are, assign them to the variable
+            likelihoods = self.dh.validate_likelihoods(data['likelihoods'], diseases, valid_signs)
+        else:
             likelihoods: Dict[str, Dict[str, float]] = self.gh.get_likelihood_data(animal)
-
         # Grab the list of signs from the API request data
         shown_signs: Dict[str, int] = data['signs']
         if set(shown_signs.keys()) != set(valid_signs):
             raise BadRequest(
                 f'Invalid signs: {list(set(shown_signs.keys()) - set(valid_signs))}. '
-                f'Please use a valid sign from /api/data/valid_signs/{animal}.')
+                f'Please use valid sign from /api/data/valid_signs/{animal}.')
 
         valid_sign_values = [0, 1, -1]
         # Check if the signs values are all valid
