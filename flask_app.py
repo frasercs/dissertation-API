@@ -1,11 +1,13 @@
 import os
 import sys
+import random
 from typing import Dict, List, Union
 
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
+
 from werkzeug.exceptions import BadRequest
 
 # load the Excel file
@@ -589,7 +591,7 @@ class getRequiredInputData(Resource):
         return jsonify(
             {'diseases': self.gh.get_disease_wiki_ids(animal), 'signs': self.gh.get_sign_names_and_codes(animal)})
 
-
+@api.hide
 @api.route('/api/data/matrix/<string:animal>')
 @api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
     'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
@@ -614,6 +616,41 @@ class getDiseaseSignMatrix(Resource):
             raise BadRequest(f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
         # Get the correct data from the data Excel sheet
         data = self.gh.get_likelihood_data(animal)
+        # Return the data
+        return jsonify(data)
+
+
+@api.route('/api/data/example_matrix/<string:animal>')
+@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Invalid Argument'}, params={
+    'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
+              'animal as returned by /api/data/valid_animals. \n \n'},
+         description='<h1>Description</h1><p>This endpoint returns a '
+                     '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
+                     'object containing an example disease-sign Bayesian matrix for the given animal. '
+                     'This matrix contains randomly generated '
+                     'likelihoods of each sign being present for each disease.</p><h1>URL Parameters</h1><ul><li>'
+                     '<p>animal: The species of animal you wish to retrieve the disease-sign matrix for. '
+                     'This must be a valid animal as returned by /api/data/valid_animals. </p></li></ul>\n \n ')
+class getExampleMatrix(Resource):
+    def __init__(self, *args, **kwargs):
+        self.gh = getHelper()
+        super(getExampleMatrix, self).__init__(*args, **kwargs)
+
+    def get(self, animal):
+        # Handle capitalisation
+        animal = animal.capitalize()
+        # Check if the animal is valid
+        if animal not in getAnimals().get().get_json():
+            # If the animal is invalid, raise an error
+            raise BadRequest(f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
+        # Get the correct data from the data Excel sheet
+        data = self.gh.get_likelihood_data(animal)
+
+        # Generate random data in place of the real data
+        for disease in data:
+            for sign in data[disease]:
+                data[disease][sign] = random.uniform(0.00001, 0.99999)
+
         # Return the data
         return jsonify(data)
 
