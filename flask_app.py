@@ -1,14 +1,19 @@
+"""
+
+This file contains the code for the Flask API. It is used to diagnose animals using Bayes Theorem.
+
+"""
+
 import os
-import sys
 import random
+import sys
 from typing import Dict, List, Union
 
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields
 from openpyxl import load_workbook
-
-from werkzeug.exceptions import BadRequest, NotFound
+from werkzeug.exceptions import BadRequest
 
 # load the Excel file
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
@@ -23,7 +28,6 @@ CORS(app)
 # init the api using factory pattern
 api.init_app(app)
 
-
 diagnosis_payload_model = api.model('Diagnose', {
     'animal': fields.String(required=True, description='The species of animal. As of version 1.0 this can be'
                                                        ' \'Cattle\', \'Sheep\',\'Goat\', \'Camel\', \'Horse\'or '
@@ -35,18 +39,29 @@ diagnosis_payload_model = api.model('Diagnose', {
                                     '\"SV_Oedm\": 1, \"Weak\": 0,\"Wght_L\": 0}',
                         example={"Anae": 0, "Anrx": 1, "Atax": 0, "Const": 0, "Diarr": 0, "Dysnt": 1, "Dyspn": 0,
                                  "Icter": 0, "Lymph": -1, "Pyrx": 0, "Stare": 0, "Stunt": 0, "SV_Oedm": 1, "Weak": 0,
-                                 "Wght_L": 0}),
-    'priors': fields.Raw(required=False,
-                         description='This field can be used if you wish to specify which diseases are more likely'
-                                     'than others. If left blank, the algorithm will assume all diseases '
-                                     'have an equal chance of occurring. The values given MUST add up to 100. '
-                                     'The values given are the percentage likelihood of each disease occurring. \n \n '
-                                     'You must provide data for every disease. This is the case as without every '
-                                     'disease being considered, the algorithm\'s output will be far less accurate',
-                         example={"Anthrax": 5, "Babesiosis": 5, "Blackleg": 5, "CBPP": 5, "Colibacillosis": 5,
-                                  "Cowdriosis": 5, "FMD": 5, "Fasciolosis": 5, "LSD": 5, "Lungworm": 25,
-                                  "Pasteurollosis": 5, "PGE / GIT parasite": 5, "Rabies": 5, "Trypanosomosis": 5,
-                                  "Tuberculosis": 5, "ZZ_Other": 5}),
+                                 "Wght_L": 0}), 'priors': fields.Raw(required=False,
+                                                                     description='This field can be used if you wish '
+                                                                                 'to specify which diseases are more '
+                                                                                 'likely than others. If left blank, '
+                                                                                 'the algorithm will assume all '
+                                                                                 'diseases have an equal chance of '
+                                                                                 'occurring. The values given MUST '
+                                                                                 'add up to 100. The values given are '
+                                                                                 'the percentage likelihood of each '
+                                                                                 'disease occurring. \n \n '
+                                                                                 'You must provide data for every '
+                                                                                 'disease. This is the case as '
+                                                                                 'without every disease being '
+                                                                                 'considered, the algorithm\'s output '
+                                                                                 'will be far less accurate',
+                                                                     example={"Anthrax": 5, "Babesiosis": 5,
+                                                                              "Blackleg": 5, "CBPP": 5,
+                                                                              "Colibacillosis": 5, "Cowdriosis": 5,
+                                                                              "FMD": 5, "Fasciolosis": 5, "LSD": 5,
+                                                                              "Lungworm": 25, "Pasteurollosis": 5,
+                                                                              "PGE / GIT parasite": 5, "Rabies": 5,
+                                                                              "Trypanosomosis": 5, "Tuberculosis": 5,
+                                                                              "ZZ_Other": 5}),
     'likelihoods': fields.Raw(required=False,
                               description='This field can be used to define your own likelihood data for each disease '
                                           'being the cause of each sign.If left blank, the algorithm will use the '
@@ -55,281 +70,55 @@ diagnosis_payload_model = api.model('Diagnose', {
                                           'sign being present when the animal has the disease. \n \n You must provide '
                                           'data for every disease and every sign. This is the case as without '
                                           'every disease and sign being considered, the algorithm\'s '
-                                          'will not work correctly.',
-                              example={
-                                          "Anthrax": {
-                                            "Anae": 0.2668,
-                                            "Anrx": 0.4023,
-                                            "Atax": 0.0085,
-                                            "Const": 0.185,
-                                            "Diarr": 0.7954,
-                                            "Dysnt": 0.0888,
-                                            "Dyspn": 0.7864,
-                                            "Icter": 0.2016,
-                                            "Lymph": 0.6453,
-                                            "Pyrx": 0.8447,
-                                            "SV_Oedm": 0.0814,
-                                            "Stare": 0.5038,
-                                            "Stunt": 0.7275,
-                                            "Weak": 0.0771,
-                                            "Wght_L": 0.6383
-                                          },
-                                          "Babesiosis": {
-                                            "Anae": 0.9315,
-                                            "Anrx": 0.1084,
-                                            "Atax": 0.5898,
-                                            "Const": 0.7412,
-                                            "Diarr": 0.2778,
-                                            "Dysnt": 0.5351,
-                                            "Dyspn": 0.2371,
-                                            "Icter": 0.1604,
-                                            "Lymph": 0.5144,
-                                            "Pyrx": 0.8542,
-                                            "SV_Oedm": 0.8295,
-                                            "Stare": 0.8088,
-                                            "Stunt": 0.9521,
-                                            "Weak": 0.1691,
-                                            "Wght_L": 0.6912
-                                          },
-                                          "Blackleg": {
-                                            "Anae": 0.2589,
-                                            "Anrx": 0.1933,
-                                            "Atax": 0.503,
-                                            "Const": 0.3529,
-                                            "Diarr": 0.5158,
-                                            "Dysnt": 0.9027,
-                                            "Dyspn": 0.3662,
-                                            "Icter": 0.6998,
-                                            "Lymph": 0.3139,
-                                            "Pyrx": 0.2509,
-                                            "SV_Oedm": 0.735,
-                                            "Stare": 0.1036,
-                                            "Stunt": 0.5706,
-                                            "Weak": 0.2188,
-                                            "Wght_L": 0.0016
-                                          },
-                                          "CBPP": {
-                                            "Anae": 0.4047,
-                                            "Anrx": 0.9005,
-                                            "Atax": 0.7564,
-                                            "Const": 0.9049,
-                                            "Diarr": 0.0014,
-                                            "Dysnt": 0.0739,
-                                            "Dyspn": 0.9572,
-                                            "Icter": 0.2247,
-                                            "Lymph": 0.0228,
-                                            "Pyrx": 0.8588,
-                                            "SV_Oedm": 0.2807,
-                                            "Stare": 0.6536,
-                                            "Stunt": 0.1723,
-                                            "Weak": 0.0436,
-                                            "Wght_L": 0.7293
-                                          },
-                                          "Colibacillosis": {
-                                            "Anae": 0.5151,
-                                            "Anrx": 0.6292,
-                                            "Atax": 0.1373,
-                                            "Const": 0.4801,
-                                            "Diarr": 0.5341,
-                                            "Dysnt": 0.8744,
-                                            "Dyspn": 0.5039,
-                                            "Icter": 0.7543,
-                                            "Lymph": 0.4948,
-                                            "Pyrx": 0.404,
-                                            "SV_Oedm": 0.5243,
-                                            "Stare": 0.1538,
-                                            "Stunt": 0.6301,
-                                            "Weak": 0.8463,
-                                            "Wght_L": 0.1069
-                                          },
-                                          "Cowdriosis": {
-                                            "Anae": 0.1476,
-                                            "Anrx": 0.7902,
-                                            "Atax": 0.7319,
-                                            "Const": 0.7912,
-                                            "Diarr": 0.7395,
-                                            "Dysnt": 0.6757,
-                                            "Dyspn": 0.1096,
-                                            "Icter": 0.3056,
-                                            "Lymph": 0.185,
-                                            "Pyrx": 0.3019,
-                                            "SV_Oedm": 0.4824,
-                                            "Stare": 0.0284,
-                                            "Stunt": 0.5792,
-                                            "Weak": 0.1685,
-                                            "Wght_L": 0.2448
-                                          },
-                                          "FMD": {
-                                            "Anae": 0.2977,
-                                            "Anrx": 0.871,
-                                            "Atax": 0.963,
-                                            "Const": 0.1151,
-                                            "Diarr": 0.9518,
-                                            "Dysnt": 0.6154,
-                                            "Dyspn": 0.6984,
-                                            "Icter": 0.4119,
-                                            "Lymph": 0.3372,
-                                            "Pyrx": 0.6846,
-                                            "SV_Oedm": 0.0385,
-                                            "Stare": 0.6973,
-                                            "Stunt": 0.4824,
-                                            "Weak": 0.6523,
-                                            "Wght_L": 0.614
-                                          },
-                                          "Fasciolosis": {
-                                            "Anae": 0.0095,
-                                            "Anrx": 0.977,
-                                            "Atax": 0.1164,
-                                            "Const": 0.1311,
-                                            "Diarr": 0.0569,
-                                            "Dysnt": 0.1604,
-                                            "Dyspn": 0.0823,
-                                            "Icter": 0.4349,
-                                            "Lymph": 0.6208,
-                                            "Pyrx": 0.9651,
-                                            "SV_Oedm": 0.1108,
-                                            "Stare": 0.8521,
-                                            "Stunt": 0.5637,
-                                            "Weak": 0.1865,
-                                            "Wght_L": 0.7242
-                                          },
-                                          "LSD": {
-                                            "Anae": 0.0883,
-                                            "Anrx": 0.3197,
-                                            "Atax": 0.9291,
-                                            "Const": 0.6622,
-                                            "Diarr": 0.631,
-                                            "Dysnt": 0.6657,
-                                            "Dyspn": 0.974,
-                                            "Icter": 0.153,
-                                            "Lymph": 0.8023,
-                                            "Pyrx": 0.2831,
-                                            "SV_Oedm": 0.4065,
-                                            "Stare": 0.2959,
-                                            "Stunt": 0.3347,
-                                            "Weak": 0.5577,
-                                            "Wght_L": 0.9966
-                                          },
-                                          "Lungworm": {
-                                            "Anae": 0.4765,
-                                            "Anrx": 0.7152,
-                                            "Atax": 0.6797,
-                                            "Const": 0.938,
-                                            "Diarr": 0.6535,
-                                            "Dysnt": 0.9752,
-                                            "Dyspn": 0.6245,
-                                            "Icter": 0.4954,
-                                            "Lymph": 0.4811,
-                                            "Pyrx": 0.3523,
-                                            "SV_Oedm": 0.2446,
-                                            "Stare": 0.6479,
-                                            "Stunt": 0.7919,
-                                            "Weak": 0.7959,
-                                            "Wght_L": 0.0079
-                                          },
-                                          "PGE / GIT parasite": {
-                                            "Anae": 0.2108,
-                                            "Anrx": 0.078,
-                                            "Atax": 0.6913,
-                                            "Const": 0.664,
-                                            "Diarr": 0.5129,
-                                            "Dysnt": 0.1369,
-                                            "Dyspn": 0.27,
-                                            "Icter": 0.9672,
-                                            "Lymph": 0.8923,
-                                            "Pyrx": 0.1874,
-                                            "SV_Oedm": 0.7678,
-                                            "Stare": 0.4827,
-                                            "Stunt": 0.6827,
-                                            "Weak": 0.8251,
-                                            "Wght_L": 0.4358
-                                          },
-                                          "Pasteurollosis": {
-                                            "Anae": 0.5699,
-                                            "Anrx": 0.8898,
-                                            "Atax": 0.7183,
-                                            "Const": 0.9549,
-                                            "Diarr": 0.4316,
-                                            "Dysnt": 0.5618,
-                                            "Dyspn": 0.4728,
-                                            "Icter": 0.5825,
-                                            "Lymph": 0.2789,
-                                            "Pyrx": 0.6803,
-                                            "SV_Oedm": 0.1556,
-                                            "Stare": 0.1606,
-                                            "Stunt": 0.5968,
-                                            "Weak": 0.4604,
-                                            "Wght_L": 0.1261
-                                          },
-                                          "Rabies": {
-                                            "Anae": 0.021,
-                                            "Anrx": 0.1521,
-                                            "Atax": 0.99,
-                                            "Const": 0.553,
-                                            "Diarr": 0.6056,
-                                            "Dysnt": 0.123,
-                                            "Dyspn": 0.5579,
-                                            "Icter": 0.8676,
-                                            "Lymph": 0.4572,
-                                            "Pyrx": 0.4503,
-                                            "SV_Oedm": 0.8823,
-                                            "Stare": 0.6489,
-                                            "Stunt": 0.0886,
-                                            "Weak": 0.5222,
-                                            "Wght_L": 0.4999
-                                          },
-                                          "Trypanosomosis": {
-                                            "Anae": 0.3602,
-                                            "Anrx": 0.6961,
-                                            "Atax": 0.898,
-                                            "Const": 0.6043,
-                                            "Diarr": 0.5259,
-                                            "Dysnt": 0.3489,
-                                            "Dyspn": 0.6187,
-                                            "Icter": 0.3156,
-                                            "Lymph": 0.0677,
-                                            "Pyrx": 0.0405,
-                                            "SV_Oedm": 0.0257,
-                                            "Stare": 0.5779,
-                                            "Stunt": 0.9064,
-                                            "Weak": 0.0779,
-                                            "Wght_L": 0.9971
-                                          },
-                                          "Tuberculosis": {
-                                            "Anae": 0.2207,
-                                            "Anrx": 0.7513,
-                                            "Atax": 0.9402,
-                                            "Const": 0.5418,
-                                            "Diarr": 0.9419,
-                                            "Dysnt": 0.0402,
-                                            "Dyspn": 0.6023,
-                                            "Icter": 0.399,
-                                            "Lymph": 0.6675,
-                                            "Pyrx": 0.5587,
-                                            "SV_Oedm": 0.4947,
-                                            "Stare": 0.59,
-                                            "Stunt": 0.1479,
-                                            "Weak": 0.8633,
-                                            "Wght_L": 0.085
-                                          },
-                                          "ZZ_Other": {
-                                            "Anae": 0.6361,
-                                            "Anrx": 0.1729,
-                                            "Atax": 0.3008,
-                                            "Const": 0.6395,
-                                            "Diarr": 0.3737,
-                                            "Dysnt": 0.858,
-                                            "Dyspn": 0.9196,
-                                            "Icter": 0.3255,
-                                            "Lymph": 0.4681,
-                                            "Pyrx": 0.7769,
-                                            "SV_Oedm": 0.0234,
-                                            "Stare": 0.9337,
-                                            "Stunt": 0.3675,
-                                            "Weak": 0.1286,
-                                            "Wght_L": 0.0943
-                                          }
-                                        })})
+                                          'will not work correctly.', example={
+            "Anthrax": {"Anae": 0.2668, "Anrx": 0.4023, "Atax": 0.0085, "Const": 0.185, "Diarr": 0.7954,
+                "Dysnt": 0.0888, "Dyspn": 0.7864, "Icter": 0.2016, "Lymph": 0.6453, "Pyrx": 0.8447, "SV_Oedm": 0.0814,
+                "Stare": 0.5038, "Stunt": 0.7275, "Weak": 0.0771, "Wght_L": 0.6383},
+            "Babesiosis": {"Anae": 0.9315, "Anrx": 0.1084, "Atax": 0.5898, "Const": 0.7412, "Diarr": 0.2778,
+                "Dysnt": 0.5351, "Dyspn": 0.2371, "Icter": 0.1604, "Lymph": 0.5144, "Pyrx": 0.8542, "SV_Oedm": 0.8295,
+                "Stare": 0.8088, "Stunt": 0.9521, "Weak": 0.1691, "Wght_L": 0.6912},
+            "Blackleg": {"Anae": 0.2589, "Anrx": 0.1933, "Atax": 0.503, "Const": 0.3529, "Diarr": 0.5158,
+                "Dysnt": 0.9027, "Dyspn": 0.3662, "Icter": 0.6998, "Lymph": 0.3139, "Pyrx": 0.2509, "SV_Oedm": 0.735,
+                "Stare": 0.1036, "Stunt": 0.5706, "Weak": 0.2188, "Wght_L": 0.0016},
+            "CBPP": {"Anae": 0.4047, "Anrx": 0.9005, "Atax": 0.7564, "Const": 0.9049, "Diarr": 0.0014, "Dysnt": 0.0739,
+                "Dyspn": 0.9572, "Icter": 0.2247, "Lymph": 0.0228, "Pyrx": 0.8588, "SV_Oedm": 0.2807, "Stare": 0.6536,
+                "Stunt": 0.1723, "Weak": 0.0436, "Wght_L": 0.7293},
+            "Colibacillosis": {"Anae": 0.5151, "Anrx": 0.6292, "Atax": 0.1373, "Const": 0.4801, "Diarr": 0.5341,
+                "Dysnt": 0.8744, "Dyspn": 0.5039, "Icter": 0.7543, "Lymph": 0.4948, "Pyrx": 0.404, "SV_Oedm": 0.5243,
+                "Stare": 0.1538, "Stunt": 0.6301, "Weak": 0.8463, "Wght_L": 0.1069},
+            "Cowdriosis": {"Anae": 0.1476, "Anrx": 0.7902, "Atax": 0.7319, "Const": 0.7912, "Diarr": 0.7395,
+                "Dysnt": 0.6757, "Dyspn": 0.1096, "Icter": 0.3056, "Lymph": 0.185, "Pyrx": 0.3019, "SV_Oedm": 0.4824,
+                "Stare": 0.0284, "Stunt": 0.5792, "Weak": 0.1685, "Wght_L": 0.2448},
+            "FMD": {"Anae": 0.2977, "Anrx": 0.871, "Atax": 0.963, "Const": 0.1151, "Diarr": 0.9518, "Dysnt": 0.6154,
+                "Dyspn": 0.6984, "Icter": 0.4119, "Lymph": 0.3372, "Pyrx": 0.6846, "SV_Oedm": 0.0385, "Stare": 0.6973,
+                "Stunt": 0.4824, "Weak": 0.6523, "Wght_L": 0.614},
+            "Fasciolosis": {"Anae": 0.0095, "Anrx": 0.977, "Atax": 0.1164, "Const": 0.1311, "Diarr": 0.0569,
+                "Dysnt": 0.1604, "Dyspn": 0.0823, "Icter": 0.4349, "Lymph": 0.6208, "Pyrx": 0.9651, "SV_Oedm": 0.1108,
+                "Stare": 0.8521, "Stunt": 0.5637, "Weak": 0.1865, "Wght_L": 0.7242},
+            "LSD": {"Anae": 0.0883, "Anrx": 0.3197, "Atax": 0.9291, "Const": 0.6622, "Diarr": 0.631, "Dysnt": 0.6657,
+                "Dyspn": 0.974, "Icter": 0.153, "Lymph": 0.8023, "Pyrx": 0.2831, "SV_Oedm": 0.4065, "Stare": 0.2959,
+                "Stunt": 0.3347, "Weak": 0.5577, "Wght_L": 0.9966},
+            "Lungworm": {"Anae": 0.4765, "Anrx": 0.7152, "Atax": 0.6797, "Const": 0.938, "Diarr": 0.6535,
+                "Dysnt": 0.9752, "Dyspn": 0.6245, "Icter": 0.4954, "Lymph": 0.4811, "Pyrx": 0.3523, "SV_Oedm": 0.2446,
+                "Stare": 0.6479, "Stunt": 0.7919, "Weak": 0.7959, "Wght_L": 0.0079},
+            "PGE / GIT parasite": {"Anae": 0.2108, "Anrx": 0.078, "Atax": 0.6913, "Const": 0.664, "Diarr": 0.5129,
+                "Dysnt": 0.1369, "Dyspn": 0.27, "Icter": 0.9672, "Lymph": 0.8923, "Pyrx": 0.1874, "SV_Oedm": 0.7678,
+                "Stare": 0.4827, "Stunt": 0.6827, "Weak": 0.8251, "Wght_L": 0.4358},
+            "Pasteurollosis": {"Anae": 0.5699, "Anrx": 0.8898, "Atax": 0.7183, "Const": 0.9549, "Diarr": 0.4316,
+                "Dysnt": 0.5618, "Dyspn": 0.4728, "Icter": 0.5825, "Lymph": 0.2789, "Pyrx": 0.6803, "SV_Oedm": 0.1556,
+                "Stare": 0.1606, "Stunt": 0.5968, "Weak": 0.4604, "Wght_L": 0.1261},
+            "Rabies": {"Anae": 0.021, "Anrx": 0.1521, "Atax": 0.99, "Const": 0.553, "Diarr": 0.6056, "Dysnt": 0.123,
+                "Dyspn": 0.5579, "Icter": 0.8676, "Lymph": 0.4572, "Pyrx": 0.4503, "SV_Oedm": 0.8823, "Stare": 0.6489,
+                "Stunt": 0.0886, "Weak": 0.5222, "Wght_L": 0.4999},
+            "Trypanosomosis": {"Anae": 0.3602, "Anrx": 0.6961, "Atax": 0.898, "Const": 0.6043, "Diarr": 0.5259,
+                "Dysnt": 0.3489, "Dyspn": 0.6187, "Icter": 0.3156, "Lymph": 0.0677, "Pyrx": 0.0405, "SV_Oedm": 0.0257,
+                "Stare": 0.5779, "Stunt": 0.9064, "Weak": 0.0779, "Wght_L": 0.9971},
+            "Tuberculosis": {"Anae": 0.2207, "Anrx": 0.7513, "Atax": 0.9402, "Const": 0.5418, "Diarr": 0.9419,
+                "Dysnt": 0.0402, "Dyspn": 0.6023, "Icter": 0.399, "Lymph": 0.6675, "Pyrx": 0.5587, "SV_Oedm": 0.4947,
+                "Stare": 0.59, "Stunt": 0.1479, "Weak": 0.8633, "Wght_L": 0.085},
+            "ZZ_Other": {"Anae": 0.6361, "Anrx": 0.1729, "Atax": 0.3008, "Const": 0.6395, "Diarr": 0.3737,
+                "Dysnt": 0.858, "Dyspn": 0.9196, "Icter": 0.3255, "Lymph": 0.4681, "Pyrx": 0.7769, "SV_Oedm": 0.0234,
+                "Stare": 0.9337, "Stunt": 0.3675, "Weak": 0.1286, "Wght_L": 0.0943}})})
 
 custom_diagnosis_payload_model = api.model('Custom Diagnosis Payload', {
 
@@ -347,12 +136,20 @@ custom_diagnosis_payload_model = api.model('Custom Diagnosis Payload', {
 
 
 class getHelper:
+    """
+    A class used to get data from the Excel workbook
+    """
 
     def __init__(self, *args, **kwargs):
         super(getHelper, self).__init__(*args, **kwargs)
 
     # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
     def get_disease_wiki_ids(self, animal):
+        """
+        A function used to get the WikiData IDs for the diseases
+        :param animal:
+        :return:
+        """
         # Empty dictionary to store the WikiData IDs
         wiki_ids = {}
         # Get the list of diseases
@@ -367,47 +164,42 @@ class getHelper:
 
     # A function used to collect the data from the Excel workbook which I manually formatted to ensure the data works.
     def get_likelihood_data(self, animal):
+        """
+        A function used to get the likelihood data from the Excel workbook
+        :param animal:
+        :return:
+        """
         # Load the correct Excel sheet
         ws = wb[animal]
-        # Check if the animal exists
-        if ws == -1:
-            return -1
-
         # Get the list of signs and diseases
         signs = self.get_signs(animal)
         diseases = self.get_diseases(animal)
-        if signs == -1 or diseases == -1:
-            return -1
-
         # Dictionary which stores the likelihoods of each disease
         likelihoods = {}
-
         # Loop through all rows in the workbook
         for i, row in enumerate(ws.rows):
             # Skip the first row as it is just the headers
             if i == 0:
                 continue
-
-            # Counter used to keep track of the current sign
-
             # Dictionary which stores the likelihoods of each sign for the current disease
             current_disease_likelihoods = {}
-
             # Loop through all cells in each row except the first one as it is the disease name
             for j, cell in enumerate(row[1:]):
                 chance = cell.value
                 current_disease_likelihoods[signs[j]] = chance
             likelihoods[diseases[i - 1]] = current_disease_likelihoods
-
         return likelihoods
 
     @staticmethod
     def get_diseases(animal):
+        """
+        A function used to get the diseases from the Excel workbook
+        :param animal:
+        :return:
+        """
         # List which stores every given disease
         diseases = []
         ws = wb[animal]
-        if ws == -1:
-            return -1
         # Populate the list of diseases
         for row in ws.iter_rows(min_row=2, max_col=1, max_row=ws.max_row):
             for cell in row:
@@ -416,6 +208,11 @@ class getHelper:
 
     @staticmethod
     def get_signs(animal):
+        """
+        A function used to get the signs from the Excel workbook
+        :param animal:
+        :return:
+        """
         # List which stores every given sign
         signs = []
         ws_signs = wb[animal]
@@ -427,6 +224,11 @@ class getHelper:
 
     @staticmethod
     def get_sign_names_and_codes(animal):
+        """
+        Get the full name and Wikidata code for each sign
+        :param animal:
+        :return:
+        """
         ws = wb[animal + '_Abbr']
         full_sign_data = {}
         medical_name = {}
@@ -439,9 +241,19 @@ class getHelper:
 
 
 class diagnosisHelper:
+    """
+    A class used to validate the data provided by the user and perform the Bayes Theorem calculations to determine the
+    probability of each disease
+    """
 
     @staticmethod
     def validate_priors(priors, diseases):
+        """
+        A function used to validate the priors provided by the user
+        :param priors:
+        :param diseases:
+        :return:
+        """
         provided_keys = []
         for key in priors.keys():
             if key not in diseases:
@@ -460,9 +272,14 @@ class diagnosisHelper:
         return priors
 
     @staticmethod
-    # function which checks the data provided is valid and checks that the values of the likelihoods are always
-    # greater than 0 and less than 1
     def validate_likelihoods(likelihoods, diseases, signs):
+        """
+        A function used to validate the likelihoods provided by the user
+        :param likelihoods:
+        :param diseases:
+        :param signs:
+        :return:
+        """
         provided_keys = []
         likelihoods = likelihoods
         for key in likelihoods.keys():
@@ -499,6 +316,14 @@ class diagnosisHelper:
 
     @staticmethod
     def calculate_results(diseases, likelihoods, shown_signs, priors):
+        """
+        A function used to calculate the results of the Bayes Theorem
+        :param diseases:
+        :param likelihoods:
+        :param shown_signs:
+        :param priors:
+        :return:
+        """
         results = {}
         for disease in diseases:
             chain_probability = 1.0
@@ -514,8 +339,12 @@ class diagnosisHelper:
         return results
 
     @staticmethod
-    # A function used to normalise the outputs of the bayes calculation
     def normalise(results):
+        """
+        A function used to normalise the results of the Bayes Theorem calculations
+        :param results:
+        :return:
+        """
         normalised_results = {}
         summed_results = sum(results.values())
         for r in results:
@@ -526,6 +355,11 @@ class diagnosisHelper:
 
     @staticmethod
     def get_default_priors(diseases):
+        """
+        A function used to generate equal priors if the user does not provide any
+        :param diseases:
+        :return priors:
+        """
         priors = {}
         for disease in diseases:
             priors[disease] = 100 / len(diseases)
@@ -574,342 +408,345 @@ class diagnosisHelper:
                      '\"Lungworm\":25,\"Pasteurollosis\": 5,\"PGE / GIT parasite\": 5,\"Rabies\": 5, '
                      '\"Trypanosomosis\": 5,\"Tuberculosis\": 5,\"ZZ_Other\": 5},\n'
                      '"likelihoods": { '
-                                    '    "Anthrax": {'
-                                    '      "Anae": 0.2668,'
-                                    '      "Anrx": 0.4023,'
-                                    '      "Atax": 0.0085,'
-                                    '      "Const": 0.185,'
-                                    '      "Diarr": 0.7954,'
-                                    '      "Dysnt": 0.0888,'
-                                    '      "Dyspn": 0.7864,'
-                                    '      "Icter": 0.2016,'
-                                    '      "Lymph": 0.6453,'
-                                    '      "Pyrx": 0.8447,'
-                                    '      "SV_Oedm": 0.0814,'
-                                    '      "Stare": 0.5038,'
-                                    '      "Stunt": 0.7275,'
-                                    '      "Weak": 0.0771,'
-                                    '      "Wght_L": 0.6383'
-                                    '    },'
-                                    '    "Babesiosis": {'
-                                    '      "Anae": 0.9315,'
-                                    '      "Anrx": 0.1084,'
-                                    '      "Atax": 0.5898,'
-                                    '      "Const": 0.7412,'
-                                    '      "Diarr": 0.2778,'
-                                    '      "Dysnt": 0.5351,'
-                                    '      "Dyspn": 0.2371,'
-                                    '      "Icter": 0.1604,'
-                                    '      "Lymph": 0.5144,'
-                                    '      "Pyrx": 0.8542,'
-                                    '      "SV_Oedm": 0.8295,'
-                                    '      "Stare": 0.8088,'
-                                    '      "Stunt": 0.9521,'
-                                    '      "Weak": 0.1691,'
-                                    '      "Wght_L": 0.6912'
-                                    '    },'
-                                    '    "Blackleg": {'
-                                    '      "Anae": 0.2589,'
-                                    '      "Anrx": 0.1933,'
-                                    '      "Atax": 0.503,'
-                                    '      "Const": 0.3529,'
-                                    '      "Diarr": 0.5158,'
-                                    '      "Dysnt": 0.9027,'
-                                    '      "Dyspn": 0.3662,'
-                                    '      "Icter": 0.6998,'
-                                    '      "Lymph": 0.3139,'
-                                    '      "Pyrx": 0.2509,'
-                                    '      "SV_Oedm": 0.735,'
-                                    '      "Stare": 0.1036,'
-                                    '      "Stunt": 0.5706,'
-                                    '      "Weak": 0.2188,'
-                                    '      "Wght_L": 0.0016'
-                                    '    },'
-                                    '    "CBPP": {'
-                                    '      "Anae": 0.4047,'
-                                    '      "Anrx": 0.9005,'
-                                    '      "Atax": 0.7564,'
-                                    '      "Const": 0.9049,'
-                                    '      "Diarr": 0.0014,'
-                                    '      "Dysnt": 0.0739,'
-                                    '      "Dyspn": 0.9572,'
-                                    '      "Icter": 0.2247,'
-                                    '      "Lymph": 0.0228,'
-                                    '      "Pyrx": 0.8588,'
-                                    '      "SV_Oedm": 0.2807,'
-                                    '      "Stare": 0.6536,'
-                                    '      "Stunt": 0.1723,'
-                                    '      "Weak": 0.0436,'
-                                    '      "Wght_L": 0.7293'
-                                    '    },'
-                                    '    "Colibacillosis": {'
-                                    '      "Anae": 0.5151,'
-                                    '      "Anrx": 0.6292,'
-                                    '      "Atax": 0.1373,'
-                                    '      "Const": 0.4801,'
-                                    '      "Diarr": 0.5341,'
-                                    '      "Dysnt": 0.8744,'
-                                    '      "Dyspn": 0.5039,'
-                                    '      "Icter": 0.7543,'
-                                    '      "Lymph": 0.4948,'
-                                    '      "Pyrx": 0.404,'
-                                    '      "SV_Oedm": 0.5243,'
-                                    '      "Stare": 0.1538,'
-                                    '      "Stunt": 0.6301,'
-                                    '      "Weak": 0.8463,'
-                                    '      "Wght_L": 0.1069'
-                                    '    },'
-                                    '    "Cowdriosis": {'
-                                    '      "Anae": 0.1476,'
-                                    '      "Anrx": 0.7902,'
-                                    '      "Atax": 0.7319,'
-                                    '      "Const": 0.7912,'
-                                    '      "Diarr": 0.7395,'
-                                    '      "Dysnt": 0.6757,'
-                                    '      "Dyspn": 0.1096,'
-                                    '      "Icter": 0.3056,'
-                                    '      "Lymph": 0.185,'
-                                    '      "Pyrx": 0.3019,'
-                                    '      "SV_Oedm": 0.4824,'
-                                    '      "Stare": 0.0284,'
-                                    '      "Stunt": 0.5792,'
-                                    '      "Weak": 0.1685,'
-                                    '      "Wght_L": 0.2448'
-                                    '    },'
-                                    '    "FMD": {'
-                                    '      "Anae": 0.2977,'
-                                    '      "Anrx": 0.871,'
-                                    '      "Atax": 0.963,'
-                                    '      "Const": 0.1151,'
-                                    '      "Diarr": 0.9518,'
-                                    '      "Dysnt": 0.6154,'
-                                    '      "Dyspn": 0.6984,'
-                                    '      "Icter": 0.4119,'
-                                    '      "Lymph": 0.3372,'
-                                    '      "Pyrx": 0.6846,'
-                                    '      "SV_Oedm": 0.0385,'
-                                    '      "Stare": 0.6973,'
-                                    '      "Stunt": 0.4824,'
-                                    '      "Weak": 0.6523,'
-                                    '      "Wght_L": 0.614'
-                                    '    },'
-                                    '    "Fasciolosis": {'
-                                    '      "Anae": 0.0095,'
-                                    '      "Anrx": 0.977,'
-                                    '      "Atax": 0.1164,'
-                                    '      "Const": 0.1311,'
-                                    '      "Diarr": 0.0569,'
-                                    '      "Dysnt": 0.1604,'
-                                    '      "Dyspn": 0.0823,'
-                                    '      "Icter": 0.4349,'
-                                    '      "Lymph": 0.6208,'
-                                    '      "Pyrx": 0.9651,'
-                                    '      "SV_Oedm": 0.1108,'
-                                    '      "Stare": 0.8521,'
-                                    '      "Stunt": 0.5637,'
-                                    '      "Weak": 0.1865,'
-                                    '      "Wght_L": 0.7242'
-                                    '    },'
-                                    '    "LSD": {'
-                                    '      "Anae": 0.0883,'
-                                    '      "Anrx": 0.3197,'
-                                    '      "Atax": 0.9291,'
-                                    '      "Const": 0.6622,'
-                                    '      "Diarr": 0.631,'
-                                    '      "Dysnt": 0.6657,'
-                                    '      "Dyspn": 0.974,'
-                                    '      "Icter": 0.153,'
-                                    '      "Lymph": 0.8023,'
-                                    '      "Pyrx": 0.2831,'
-                                    '      "SV_Oedm": 0.4065,'
-                                    '      "Stare": 0.2959,'
-                                    '      "Stunt": 0.3347,'
-                                    '      "Weak": 0.5577,'
-                                    '      "Wght_L": 0.9966'
-                                    '    },'
-                                    '    "Lungworm": {'
-                                    '      "Anae": 0.4765,'
-                                    '      "Anrx": 0.7152,'
-                                    '      "Atax": 0.6797,'
-                                    '      "Const": 0.938,'
-                                    '      "Diarr": 0.6535,'
-                                    '      "Dysnt": 0.9752,'
-                                    '      "Dyspn": 0.6245,'
-                                    '      "Icter": 0.4954,'
-                                    '      "Lymph": 0.4811,'
-                                    '      "Pyrx": 0.3523,'
-                                    '      "SV_Oedm": 0.2446,'
-                                    '      "Stare": 0.6479,'
-                                    '      "Stunt": 0.7919,'
-                                    '      "Weak": 0.7959,'
-                                    '      "Wght_L": 0.0079'
-                                    '    },'
-                                    '    "PGE / GIT parasite": {'
-                                    '      "Anae": 0.2108,'
-                                    '      "Anrx": 0.078,'
-                                    '      "Atax": 0.6913,'
-                                    '      "Const": 0.664,'
-                                    '      "Diarr": 0.5129,'
-                                    '      "Dysnt": 0.1369,'
-                                    '      "Dyspn": 0.27,'
-                                    '      "Icter": 0.9672,'
-                                    '      "Lymph": 0.8923,'
-                                    '      "Pyrx": 0.1874,'
-                                    '      "SV_Oedm": 0.7678,'
-                                    '      "Stare": 0.4827,'
-                                    '      "Stunt": 0.6827,'
-                                    '      "Weak": 0.8251,'
-                                    '      "Wght_L": 0.4358'
-                                    '    },'
-                                    '    "Pasteurollosis": {'
-                                    '      "Anae": 0.5699,'
-                                    '      "Anrx": 0.8898,'
-                                    '      "Atax": 0.7183,'
-                                    '      "Const": 0.9549,'
-                                    '      "Diarr": 0.4316,'
-                                    '      "Dysnt": 0.5618,'
-                                    '      "Dyspn": 0.4728,'
-                                    '      "Icter": 0.5825,'
-                                    '      "Lymph": 0.2789,'
-                                    '      "Pyrx": 0.6803,'
-                                    '      "SV_Oedm": 0.1556,'
-                                    '      "Stare": 0.1606,'
-                                    '      "Stunt": 0.5968,'
-                                    '      "Weak": 0.4604,'
-                                    '      "Wght_L": 0.1261'
-                                    '    },'
-                                    '    "Rabies": {'
-                                    '      "Anae": 0.021,'
-                                    '      "Anrx": 0.1521,'
-                                    '      "Atax": 0.99,'
-                                    '      "Const": 0.553,'
-                                    '      "Diarr": 0.6056,'
-                                    '      "Dysnt": 0.123,'
-                                    '      "Dyspn": 0.5579,'
-                                    '      "Icter": 0.8676,'
-                                    '      "Lymph": 0.4572,'
-                                    '      "Pyrx": 0.4503,'
-                                    '      "SV_Oedm": 0.8823,'
-                                    '      "Stare": 0.6489,'
-                                    '      "Stunt": 0.0886,'
-                                    '      "Weak": 0.5222,'
-                                    '      "Wght_L": 0.4999'
-                                    '    },'
-                                    '    "Trypanosomosis": {'
-                                    '      "Anae": 0.3602,'
-                                    '      "Anrx": 0.6961,'
-                                    '      "Atax": 0.898,'
-                                    '      "Const": 0.6043,'
-                                    '      "Diarr": 0.5259,'
-                                    '      "Dysnt": 0.3489,'
-                                    '      "Dyspn": 0.6187,'
-                                    '      "Icter": 0.3156,'
-                                    '      "Lymph": 0.0677,'
-                                    '      "Pyrx": 0.0405,'
-                                    '      "SV_Oedm": 0.0257,'
-                                    '      "Stare": 0.5779,'
-                                    '      "Stunt": 0.9064,'
-                                    '      "Weak": 0.0779,'
-                                    '      "Wght_L": 0.9971'
-                                    '    },'
-                                    '    "Tuberculosis": {'
-                                    '      "Anae": 0.2207,'
-                                    '      "Anrx": 0.7513,'
-                                    '      "Atax": 0.9402,'
-                                    '      "Const": 0.5418,'
-                                    '      "Diarr": 0.9419,'
-                                    '      "Dysnt": 0.0402,'
-                                    '      "Dyspn": 0.6023,'
-                                    '      "Icter": 0.399,'
-                                    '      "Lymph": 0.6675,'
-                                    '      "Pyrx": 0.5587,'
-                                    '      "SV_Oedm": 0.4947,'
-                                    '      "Stare": 0.59,'
-                                    '      "Stunt": 0.1479,'
-                                    '      "Weak": 0.8633,'
-                                    '      "Wght_L": 0.085'
-                                    '    },'
-                                    '    "ZZ_Other": {'
-                                    '      "Anae": 0.6361,'
-                                    '      "Anrx": 0.1729,'
-                                    '      "Atax": 0.3008,'
-                                    '      "Const": 0.6395,'
-                                    '      "Diarr": 0.3737,'
-                                    '      "Dysnt": 0.858,'
-                                    '      "Dyspn": 0.9196,'
-                                    '      "Icter": 0.3255,'
-                                    '      "Lymph": 0.4681,'
-                                    '      "Pyrx": 0.7769,'
-                                    '      "SV_Oedm": 0.0234,'
-                                    '      "Stare": 0.9337,'
-                                    '      "Stunt": 0.3675,'
-                                    '      "Weak": 0.1286,'
-                                    '      "Wght_L": 0.0943'
-                                    '    }'
-                                    ' }\n \t }\n } ')
+                     '    "Anthrax": {'
+                     '      "Anae": 0.2668,'
+                     '      "Anrx": 0.4023,'
+                     '      "Atax": 0.0085,'
+                     '      "Const": 0.185,'
+                     '      "Diarr": 0.7954,'
+                     '      "Dysnt": 0.0888,'
+                     '      "Dyspn": 0.7864,'
+                     '      "Icter": 0.2016,'
+                     '      "Lymph": 0.6453,'
+                     '      "Pyrx": 0.8447,'
+                     '      "SV_Oedm": 0.0814,'
+                     '      "Stare": 0.5038,'
+                     '      "Stunt": 0.7275,'
+                     '      "Weak": 0.0771,'
+                     '      "Wght_L": 0.6383'
+                     '    },'
+                     '    "Babesiosis": {'
+                     '      "Anae": 0.9315,'
+                     '      "Anrx": 0.1084,'
+                     '      "Atax": 0.5898,'
+                     '      "Const": 0.7412,'
+                     '      "Diarr": 0.2778,'
+                     '      "Dysnt": 0.5351,'
+                     '      "Dyspn": 0.2371,'
+                     '      "Icter": 0.1604,'
+                     '      "Lymph": 0.5144,'
+                     '      "Pyrx": 0.8542,'
+                     '      "SV_Oedm": 0.8295,'
+                     '      "Stare": 0.8088,'
+                     '      "Stunt": 0.9521,'
+                     '      "Weak": 0.1691,'
+                     '      "Wght_L": 0.6912'
+                     '    },'
+                     '    "Blackleg": {'
+                     '      "Anae": 0.2589,'
+                     '      "Anrx": 0.1933,'
+                     '      "Atax": 0.503,'
+                     '      "Const": 0.3529,'
+                     '      "Diarr": 0.5158,'
+                     '      "Dysnt": 0.9027,'
+                     '      "Dyspn": 0.3662,'
+                     '      "Icter": 0.6998,'
+                     '      "Lymph": 0.3139,'
+                     '      "Pyrx": 0.2509,'
+                     '      "SV_Oedm": 0.735,'
+                     '      "Stare": 0.1036,'
+                     '      "Stunt": 0.5706,'
+                     '      "Weak": 0.2188,'
+                     '      "Wght_L": 0.0016'
+                     '    },'
+                     '    "CBPP": {'
+                     '      "Anae": 0.4047,'
+                     '      "Anrx": 0.9005,'
+                     '      "Atax": 0.7564,'
+                     '      "Const": 0.9049,'
+                     '      "Diarr": 0.0014,'
+                     '      "Dysnt": 0.0739,'
+                     '      "Dyspn": 0.9572,'
+                     '      "Icter": 0.2247,'
+                     '      "Lymph": 0.0228,'
+                     '      "Pyrx": 0.8588,'
+                     '      "SV_Oedm": 0.2807,'
+                     '      "Stare": 0.6536,'
+                     '      "Stunt": 0.1723,'
+                     '      "Weak": 0.0436,'
+                     '      "Wght_L": 0.7293'
+                     '    },'
+                     '    "Colibacillosis": {'
+                     '      "Anae": 0.5151,'
+                     '      "Anrx": 0.6292,'
+                     '      "Atax": 0.1373,'
+                     '      "Const": 0.4801,'
+                     '      "Diarr": 0.5341,'
+                     '      "Dysnt": 0.8744,'
+                     '      "Dyspn": 0.5039,'
+                     '      "Icter": 0.7543,'
+                     '      "Lymph": 0.4948,'
+                     '      "Pyrx": 0.404,'
+                     '      "SV_Oedm": 0.5243,'
+                     '      "Stare": 0.1538,'
+                     '      "Stunt": 0.6301,'
+                     '      "Weak": 0.8463,'
+                     '      "Wght_L": 0.1069'
+                     '    },'
+                     '    "Cowdriosis": {'
+                     '      "Anae": 0.1476,'
+                     '      "Anrx": 0.7902,'
+                     '      "Atax": 0.7319,'
+                     '      "Const": 0.7912,'
+                     '      "Diarr": 0.7395,'
+                     '      "Dysnt": 0.6757,'
+                     '      "Dyspn": 0.1096,'
+                     '      "Icter": 0.3056,'
+                     '      "Lymph": 0.185,'
+                     '      "Pyrx": 0.3019,'
+                     '      "SV_Oedm": 0.4824,'
+                     '      "Stare": 0.0284,'
+                     '      "Stunt": 0.5792,'
+                     '      "Weak": 0.1685,'
+                     '      "Wght_L": 0.2448'
+                     '    },'
+                     '    "FMD": {'
+                     '      "Anae": 0.2977,'
+                     '      "Anrx": 0.871,'
+                     '      "Atax": 0.963,'
+                     '      "Const": 0.1151,'
+                     '      "Diarr": 0.9518,'
+                     '      "Dysnt": 0.6154,'
+                     '      "Dyspn": 0.6984,'
+                     '      "Icter": 0.4119,'
+                     '      "Lymph": 0.3372,'
+                     '      "Pyrx": 0.6846,'
+                     '      "SV_Oedm": 0.0385,'
+                     '      "Stare": 0.6973,'
+                     '      "Stunt": 0.4824,'
+                     '      "Weak": 0.6523,'
+                     '      "Wght_L": 0.614'
+                     '    },'
+                     '    "Fasciolosis": {'
+                     '      "Anae": 0.0095,'
+                     '      "Anrx": 0.977,'
+                     '      "Atax": 0.1164,'
+                     '      "Const": 0.1311,'
+                     '      "Diarr": 0.0569,'
+                     '      "Dysnt": 0.1604,'
+                     '      "Dyspn": 0.0823,'
+                     '      "Icter": 0.4349,'
+                     '      "Lymph": 0.6208,'
+                     '      "Pyrx": 0.9651,'
+                     '      "SV_Oedm": 0.1108,'
+                     '      "Stare": 0.8521,'
+                     '      "Stunt": 0.5637,'
+                     '      "Weak": 0.1865,'
+                     '      "Wght_L": 0.7242'
+                     '    },'
+                     '    "LSD": {'
+                     '      "Anae": 0.0883,'
+                     '      "Anrx": 0.3197,'
+                     '      "Atax": 0.9291,'
+                     '      "Const": 0.6622,'
+                     '      "Diarr": 0.631,'
+                     '      "Dysnt": 0.6657,'
+                     '      "Dyspn": 0.974,'
+                     '      "Icter": 0.153,'
+                     '      "Lymph": 0.8023,'
+                     '      "Pyrx": 0.2831,'
+                     '      "SV_Oedm": 0.4065,'
+                     '      "Stare": 0.2959,'
+                     '      "Stunt": 0.3347,'
+                     '      "Weak": 0.5577,'
+                     '      "Wght_L": 0.9966'
+                     '    },'
+                     '    "Lungworm": {'
+                     '      "Anae": 0.4765,'
+                     '      "Anrx": 0.7152,'
+                     '      "Atax": 0.6797,'
+                     '      "Const": 0.938,'
+                     '      "Diarr": 0.6535,'
+                     '      "Dysnt": 0.9752,'
+                     '      "Dyspn": 0.6245,'
+                     '      "Icter": 0.4954,'
+                     '      "Lymph": 0.4811,'
+                     '      "Pyrx": 0.3523,'
+                     '      "SV_Oedm": 0.2446,'
+                     '      "Stare": 0.6479,'
+                     '      "Stunt": 0.7919,'
+                     '      "Weak": 0.7959,'
+                     '      "Wght_L": 0.0079'
+                     '    },'
+                     '    "PGE / GIT parasite": {'
+                     '      "Anae": 0.2108,'
+                     '      "Anrx": 0.078,'
+                     '      "Atax": 0.6913,'
+                     '      "Const": 0.664,'
+                     '      "Diarr": 0.5129,'
+                     '      "Dysnt": 0.1369,'
+                     '      "Dyspn": 0.27,'
+                     '      "Icter": 0.9672,'
+                     '      "Lymph": 0.8923,'
+                     '      "Pyrx": 0.1874,'
+                     '      "SV_Oedm": 0.7678,'
+                     '      "Stare": 0.4827,'
+                     '      "Stunt": 0.6827,'
+                     '      "Weak": 0.8251,'
+                     '      "Wght_L": 0.4358'
+                     '    },'
+                     '    "Pasteurollosis": {'
+                     '      "Anae": 0.5699,'
+                     '      "Anrx": 0.8898,'
+                     '      "Atax": 0.7183,'
+                     '      "Const": 0.9549,'
+                     '      "Diarr": 0.4316,'
+                     '      "Dysnt": 0.5618,'
+                     '      "Dyspn": 0.4728,'
+                     '      "Icter": 0.5825,'
+                     '      "Lymph": 0.2789,'
+                     '      "Pyrx": 0.6803,'
+                     '      "SV_Oedm": 0.1556,'
+                     '      "Stare": 0.1606,'
+                     '      "Stunt": 0.5968,'
+                     '      "Weak": 0.4604,'
+                     '      "Wght_L": 0.1261'
+                     '    },'
+                     '    "Rabies": {'
+                     '      "Anae": 0.021,'
+                     '      "Anrx": 0.1521,'
+                     '      "Atax": 0.99,'
+                     '      "Const": 0.553,'
+                     '      "Diarr": 0.6056,'
+                     '      "Dysnt": 0.123,'
+                     '      "Dyspn": 0.5579,'
+                     '      "Icter": 0.8676,'
+                     '      "Lymph": 0.4572,'
+                     '      "Pyrx": 0.4503,'
+                     '      "SV_Oedm": 0.8823,'
+                     '      "Stare": 0.6489,'
+                     '      "Stunt": 0.0886,'
+                     '      "Weak": 0.5222,'
+                     '      "Wght_L": 0.4999'
+                     '    },'
+                     '    "Trypanosomosis": {'
+                     '      "Anae": 0.3602,'
+                     '      "Anrx": 0.6961,'
+                     '      "Atax": 0.898,'
+                     '      "Const": 0.6043,'
+                     '      "Diarr": 0.5259,'
+                     '      "Dysnt": 0.3489,'
+                     '      "Dyspn": 0.6187,'
+                     '      "Icter": 0.3156,'
+                     '      "Lymph": 0.0677,'
+                     '      "Pyrx": 0.0405,'
+                     '      "SV_Oedm": 0.0257,'
+                     '      "Stare": 0.5779,'
+                     '      "Stunt": 0.9064,'
+                     '      "Weak": 0.0779,'
+                     '      "Wght_L": 0.9971'
+                     '    },'
+                     '    "Tuberculosis": {'
+                     '      "Anae": 0.2207,'
+                     '      "Anrx": 0.7513,'
+                     '      "Atax": 0.9402,'
+                     '      "Const": 0.5418,'
+                     '      "Diarr": 0.9419,'
+                     '      "Dysnt": 0.0402,'
+                     '      "Dyspn": 0.6023,'
+                     '      "Icter": 0.399,'
+                     '      "Lymph": 0.6675,'
+                     '      "Pyrx": 0.5587,'
+                     '      "SV_Oedm": 0.4947,'
+                     '      "Stare": 0.59,'
+                     '      "Stunt": 0.1479,'
+                     '      "Weak": 0.8633,'
+                     '      "Wght_L": 0.085'
+                     '    },'
+                     '    "ZZ_Other": {'
+                     '      "Anae": 0.6361,'
+                     '      "Anrx": 0.1729,'
+                     '      "Atax": 0.3008,'
+                     '      "Const": 0.6395,'
+                     '      "Diarr": 0.3737,'
+                     '      "Dysnt": 0.858,'
+                     '      "Dyspn": 0.9196,'
+                     '      "Icter": 0.3255,'
+                     '      "Lymph": 0.4681,'
+                     '      "Pyrx": 0.7769,'
+                     '      "SV_Oedm": 0.0234,'
+                     '      "Stare": 0.9337,'
+                     '      "Stunt": 0.3675,'
+                     '      "Weak": 0.1286,'
+                     '      "Wght_L": 0.0943'
+                     '    }'
+                     ' }\n \t }\n } ')
 class diagnose(Resource):
+    """
+    This class is used to handle the diagnosis of the animal
+    """
+
     def __init__(self, *args, **kwargs):
+        """
+        This method is used to initialize the class and set the helper classes to be used throughout the diagnosis process
+        :param args:
+        :param kwargs:
+        """
         self.gh = getHelper()
         self.dh = diagnosisHelper()
         super(diagnose, self).__init__(*args, **kwargs)
 
     @staticmethod
     def options() -> Response:
+        # This is required to allow the OPTIONS method to be used for CORS
         return jsonify({'status': 'ok'})
 
     @api.expect(diagnosis_payload_model, validate=True)
     def post(self) -> Response:
 
-        # Get the data from the API request
         data: [str, Union[str, Dict[str, int], None]] = request.get_json()
-        # Grab the species of animal it is from the API request data and capitalize it
-        animal: str = data['animal'].capitalize()
-        # Get the list of valid animals
-        valid_animals: List[str] = getAnimals().get().get_json()
-        # Check if the provided animal is valid for the model
-        if animal not in valid_animals:
-            # If the animal is invalid, raise an error
-            return{'error': f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.', 'status': 404}, 404
-        # Get the list of valid signs for the animal
-        valid_signs = self.gh.get_signs(animal)
-        # Get the list of diseases
+        animal: str = data['animal']
+
+        animal = validate_animal(animal)
+        if animal is False:
+            return {'error': 'Invalid animal. Please use a valid animal '
+                             'from /api/data/valid_animals.', 'status': 404}, 404
+
+        valid_signs: List[str] = self.gh.get_signs(animal)
         diseases: List[str] = self.gh.get_diseases(animal)
-        # Get the list of wiki ids
         wiki_ids: Dict[str, str] = self.gh.get_disease_wiki_ids(animal)
+
         # Check if the likelihoods are included in the API request data
         if data.get('likelihoods') is not None:
-            # Check if the likelihoods are valid and if they are, assign them to the variable
             likelihoods = self.dh.validate_likelihoods(data['likelihoods'], diseases, valid_signs)
         else:
             likelihoods: Dict[str, Dict[str, float]] = self.gh.get_likelihood_data(animal)
-        # Grab the list of signs from the API request data
+
+        # Get the signs from the API request data
         shown_signs: Dict[str, int] = data['signs']
-        # Check if the signs are all valid and all required signs are present
         if set(shown_signs.keys()) != set(valid_signs):
-            raise BadRequest(
-                f'Invalid signs: {list(set(shown_signs.keys()) - set(valid_signs))}. '
-                f'Please use valid sign from /api/data/valid_signs/{animal}.')
+            raise BadRequest(f'Invalid signs: {list(set(shown_signs.keys()) - set(valid_signs))}. '
+                             f'Please use valid sign from /api/data/valid_signs/{animal}.')
+
         valid_sign_values = [0, 1, -1]
-        # Check if the signs values are all valid
         for x, value in enumerate(shown_signs.values()):
             if value not in valid_sign_values:
                 sign = list(shown_signs.keys())[x]
                 raise BadRequest(f'Error with value of {sign}: {value}. Sign values must be either -1, 0 or 1')
-        # Grab the priors from the API request data (if they exist)
+
+        # Check if the priors are included in the API request data
         if data.get('priors') is not None:
             priors = self.dh.validate_priors(data.get('priors'), diseases)
         else:
-            # If the priors are not included in the API request data, generate default, equal priors
             priors = self.dh.get_default_priors(diseases)
-        # Calculate the results
+
+        # Perform calculations and normalisation
         results: Dict[str, float] = self.dh.calculate_results(diseases, likelihoods, shown_signs, priors)
-        # Normalise the results
         normalised_results: Dict[str, float] = self.dh.normalise(results)
-        # Return the results with the valid WikiData IDs if they exist
+
         return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
 
-@api.hide
 @api.route('/api/custom_diagnose', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Bad Request', 500: 'Internal Server Error'},
          description='<h1>Description</h1><p>This endpoint takes a <a '
@@ -954,18 +791,26 @@ class diagnose(Resource):
                      '{"Fever": 0.9,"Cough": 0.9,"Diarrhoea": 0.1}},\n '
                      '"priors": {"Rabies": 20,"Cold": 80 },\n "animal": "Dog" \n}')
 class custom_diagnose(Resource):
+    """
+    This class is used to create the custom_diagnose endpoint.
+    """
 
     def __init__(self, *args, **kwargs):
+        # Initialise the helper classes
         self.gh = getHelper()
         self.dh = diagnosisHelper()
         super(custom_diagnose, self).__init__(*args, **kwargs)
 
     @staticmethod
     def options() -> Response:
+        # This is required to allow the OPTIONS method to be used for CORS
         return jsonify({'status': 'ok'})
 
     @api.expect(custom_diagnosis_payload_model, validate=True)
     def post(self):
+        # This is the POST method for the custom_diagnose endpoint which allows the user to input their own data,
+        # meaning the API can be used in a larger number of contexts.
+
         data: [str, Union[str, Dict[str, int], None]] = request.get_json()
         shown_signs: Dict[str, int] = data.get('shown_signs')
         likelihoods: Dict[str, Dict[str, float]] = data.get('likelihoods')
@@ -996,7 +841,8 @@ class custom_diagnose(Resource):
 
 
 @api.route('/api/data/full_animal_data/<string:animal>')
-@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'},
+@api.doc(example='Goat', required=True,
+         responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'},
          params={'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid '
                            'animal as returned by /api/data/valid_animals. \n \n'},
          description='<h1>Description</h1><p>This endpoint returns a '
@@ -1009,25 +855,39 @@ class custom_diagnose(Resource):
                      'diseases for. This must be a valid animal as returned by /api/data/valid_animals. '
                      '</p></li></ul>\n \n ')
 class getRequiredInputData(Resource):
+    """
+    This class is used to create the full_animal_data endpoint which returns the required input data for the
+    diagnose endpoint.
+    """
+
     def __init__(self, *args, **kwargs):
+        """
+        This function is used to initialise the getRequiredInputData class and instantiate the helper class.
+        :param args:
+        :param kwargs:
+        """
         self.gh = getHelper()
         super(getRequiredInputData, self).__init__(*args, **kwargs)
 
     def get(self, animal):
-        animal = animal.capitalize()
-        # Load the correct Excel sheet
-        if animal not in getAnimals().get().get_json():
-            # If the animal is invalid, raise an error
-            return{'error': f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.', 'status': 404}, 404
+        # This is the GET method for the full_animal_data endpoint which returns the required input data for the
+        # diagnose endpoint.
+
+        animal = validate_animal(animal)
+        if animal is False:
+            return {'error': 'Invalid animal. Please use a valid animal '
+                             'from /api/data/valid_animals.', 'status': 404}, 404
+
         return jsonify(
             {'diseases': self.gh.get_disease_wiki_ids(animal), 'signs': self.gh.get_sign_names_and_codes(animal)})
 
 
 @api.hide
 @api.route('/api/data/matrix/<string:animal>')
-@api.doc(example='Goat', required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, params={
-    'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
-              'animal as returned by /api/data/valid_animals. \n \n'},
+@api.doc(example='Goat', required=True,
+         responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, params={
+        'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
+                  'animal as returned by /api/data/valid_animals. \n \n'},
          description='<h1>Description</h1><p>This endpoint returns a '
                      '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
                      'object containing the disease-sign Bayesian matrix for the given animal. This matrix contains '
@@ -1035,27 +895,35 @@ class getRequiredInputData(Resource):
                      '<p>animal: The species of animal you wish to retrieve the disease-sign matrix for. '
                      'This must be a valid animal as returned by /api/data/valid_animals. </p></li></ul>\n \n ')
 class getDiseaseSignMatrix(Resource):
+    """
+    This class is used to create the matrix endpoint which returns the disease sign matrix for the given animal. It is
+    hidden from the Swagger UI as it is not intended to be used by the user, it is only to be used by the developer
+    or specific users permitted in order to update the data on mobile apps which need to perform calculations offline.
+    """
+
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
         super(getDiseaseSignMatrix, self).__init__(*args, **kwargs)
 
     def get(self, animal):
-        # Handle capitalisation
-        animal = animal.capitalize()
-        # Check if the animal is valid
-        if animal not in getAnimals().get().get_json():
-            # If the animal is invalid, raise an error
-            return{'error': f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.', 'status': 404}, 404
-        # Get the correct data from the data Excel sheet
-        data = self.gh.get_likelihood_data(animal)
-        # Return the data
-        return jsonify(data)
+        # This is the GET method for the matrix endpoint which returns the disease sign matrix for the given animal.
+        # It is hidden from the Swagger UI as it is not intended to be used by the user, it is only to be used by the
+        # developer or specific users permitted in order to update the data on mobile apps which need to perform
+        # calculations offline.
+
+        animal = validate_animal(animal)
+        if animal is False:
+            return {'error': 'Invalid animal. Please use a valid animal '
+                             'from /api/data/valid_animals.', 'status': 404}, 404
+
+        return jsonify(self.gh.get_likelihood_data(animal))
 
 
 @api.route('/api/data/example_matrix/<string:animal>')
-@api.doc(example='Sheep', required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, params={
-    'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
-              'animal as returned by /api/data/valid_animals. \n \n'},
+@api.doc(example='Sheep', required=True,
+         responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, params={
+        'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
+                  'animal as returned by /api/data/valid_animals. \n \n'},
          description='<h1>Description</h1><p>This endpoint returns a '
                      '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
                      'object containing an example disease-sign Bayesian matrix for the given animal. '
@@ -1064,129 +932,166 @@ class getDiseaseSignMatrix(Resource):
                      '<p>animal: The species of animal you wish to retrieve the disease-sign matrix for. '
                      'This must be a valid animal as returned by /api/data/valid_animals. </p></li></ul>\n \n ')
 class getExampleMatrix(Resource):
+    """
+    This class is used to create the example_matrix endpoint which returns a randomly generated disease sign matrix
+    for the given animal. It is used for documentation and giving context to users of the API as the data used in
+    the diagnosis process is not available to the public.
+    """
+
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
         super(getExampleMatrix, self).__init__(*args, **kwargs)
 
     def get(self, animal):
-        # Handle capitalisation
-        animal = animal.capitalize()
-        # Check if the animal is valid
-        if animal not in getAnimals().get().get_json():
-            # If the animal is invalid, raise an error
-            return{'error': f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.', 'status': 404}, 404
-        # Get the correct data from the data Excel sheet
+        # This is the GET method for the example_matrix endpoint
+
+        animal = validate_animal(animal)
+        if animal is False:
+            return {'error': 'Invalid animal. Please use a valid animal '
+                             'from /api/data/valid_animals.', 'status': 404}, 404
+
         data = self.gh.get_likelihood_data(animal)
 
-        # Generate random data in place of the real data
+        # Replace correct data with random data
         for disease in data:
             for sign in data[disease]:
                 data[disease][sign] = round(random.uniform(0.00001, 0.99999), 4)
 
-        # Return the data
         return jsonify(data)
 
 
 @api.route('/api/data/valid_animals')
 @api.doc(responses={200: 'OK', 500: 'Internal Server Error'}, description='<h1>Description</h1>'
-                                                                     '<p>This endpoint returns a <a '
-                                                                     'href="https://developer.mozilla.org/en-US/docs'
-                                                                     '/Learn/JavaScript'
-                                                                     '/Objects/JSON">JSON</a> object containing the '
-                                                                     'names of animal species which are available for '
-                                                                     'diagnosis in the /api/diagnose POST method '
-                                                                     'below. </p>\n')
+                                                                          '<p>This endpoint returns a <a '
+                                                                          'href="https://developer.mozilla.org/en-US/docs'
+                                                                          '/Learn/JavaScript'
+                                                                          '/Objects/JSON">JSON</a> object containing the '
+                                                                          'names of animal species which are available for '
+                                                                          'diagnosis in the /api/diagnose POST method '
+                                                                          'below. </p>\n')
 class getAnimals(Resource):
+    """
+    This class is used to create the valid_animals endpoint which returns the names of animals which are available for
+    diagnosis in the /api/diagnose POST method
+    """
+
     @staticmethod
     def get():
-        # Get the Excel sheets which don't contain _Abbr or _Codes
-        names = [name for name in wb.sheetnames if "_Abbr" not in name and "_Codes" not in name]
-        # Return the names
-        return jsonify(names)
+        # This is the GET method for the valid_animals endpoint
+
+        # Return the names by getting every worksheet with doesn't contain _Abbr or _Codes
+        # I'm using list comprehension as it is cleaner than a for loop, but syntacitically slightly more advanced
+
+        return jsonify([name for name in wb.sheetnames if "_Abbr" not in name and "_Codes" not in name])
 
 
 @api.route('/api/data/full_sign_data/<string:animal>')
-@api.doc(required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, description='<h1>Description</h1>'
-                                                                                    '<p>This endpoint returns a <a '
-                                                                                    'href="https://developer.mozilla'
-                                                                                    '.org/en-US/docs/Learn/JavaScript'
-                                                                                    '/Objects/JSON">JSON</a> object '
-                                                                                    'which contains the full medical '
-                                                                                    'terminology for each sign'
-                                                                                    ' in English as '
-                                                                                    'well as the corresponding <a '
-                                                                                    'href="https://www.wikidata.org'
-                                                                                    '/">WikiData IDs</a> for the '
-                                                                                    'signs ('
-                                                                                    'if they exist).</p>'
-                                                                                    '<h1>URL Parameters</h1>'
-                                                                                    '<ul>'
-                                                                                    '<li><p>animal: The species of '
-                                                                                    'animal you wish to retrieve '
-                                                                                    'signs and diseases for. This '
-                                                                                    'must be '
-                                                                                    'a valid '
-                                                                                    'animal as returned by '
-                                                                                    '/api/data/valid_animals.</p></li>'
-                                                                                    '</ul>',
+@api.doc(required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'},
+         description='<h1>Description</h1>'
+                     '<p>This endpoint returns a <a '
+                     'href="https://developer.mozilla'
+                     '.org/en-US/docs/Learn/JavaScript'
+                     '/Objects/JSON">JSON</a> object '
+                     'which contains the full medical '
+                     'terminology for each sign'
+                     ' in English as '
+                     'well as the corresponding <a '
+                     'href="https://www.wikidata.org'
+                     '/">WikiData IDs</a> for the '
+                     'signs ('
+                     'if they exist).</p>'
+                     '<h1>URL Parameters</h1>'
+                     '<ul>'
+                     '<li><p>animal: The species of '
+                     'animal you wish to retrieve '
+                     'signs and diseases for. This '
+                     'must be '
+                     'a valid '
+                     'animal as returned by '
+                     '/api/data/valid_animals.</p></li>'
+                     '</ul>',
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by /api/data/valid_animals. \n \n '})
 class getSignCodesAndTerminology(Resource):
+    """
+    This class is used to create the full_sign_data endpoint which returns the full medical terminology for each sign
+    in English as well as the corresponding WikiData IDs for the signs (if they exist).
+    """
+
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
         super(getSignCodesAndTerminology, self).__init__(*args, **kwargs)
 
     def get(self, animal):
-        # Handle capitalisation
-        animal = animal.capitalize()
-        # Check if the animal is valid
-        if animal not in getAnimals().get().get_json():
-            # If the animal is invalid, raise an error
-            raise NotFound(response=f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
-        # Return the data
+        # This is the GET method for the full_sign_data endpoint
+
+        animal = validate_animal(animal)
+        if animal is False:
+            return {'error': 'Invalid animal. Please use a valid animal '
+                             'from /api/data/valid_animals.', 'status': 404}, 404
+
         return jsonify({'full_sign_data': self.gh.get_sign_names_and_codes(animal)})
 
 
 @api.route('/api/data/full_disease_data/<string:animal>')
-@api.doc(required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, description='<h1>Description</h1>'
-                                                                                    '<p>This endpoint returns a <a '
-                                                                                    'href="https://developer.mozilla'
-                                                                                    '.org/en-US/docs/Learn/JavaScript'
-                                                                                    '/Objects/JSON">JSON</a> object '
-                                                                                    'which contains the possible '
-                                                                                    'diseases for the given animal as '
-                                                                                    'well as the corresponding <a '
-                                                                                    'href="https://www.wikidata.org'
-                                                                                    '/">WikiData IDs</a> (if they '
-                                                                                    'exist).</p>'
-                                                                                    '<h1>URL Parameters</h1>'
-                                                                                    '<ul>'
-                                                                                    '<li><p>animal: The species of '
-                                                                                    'animal you wish to retrieve '
-                                                                                    'signs and diseases for. This '
-                                                                                    'must be '
-                                                                                    'a valid '
-                                                                                    'animal as returned by '
-                                                                                    '/api/data/valid_animals.</p></li>'
-                                                                                    '</ul>',
+@api.doc(required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'},
+         description='<h1>Description</h1>'
+                     '<p>This endpoint returns a <a '
+                     'href="https://developer.mozilla'
+                     '.org/en-US/docs/Learn/JavaScript'
+                     '/Objects/JSON">JSON</a> object '
+                     'which contains the possible '
+                     'diseases for the given animal as '
+                     'well as the corresponding <a '
+                     'href="https://www.wikidata.org'
+                     '/">WikiData IDs</a> (if they '
+                     'exist).</p>'
+                     '<h1>URL Parameters</h1>'
+                     '<ul>'
+                     '<li><p>animal: The species of '
+                     'animal you wish to retrieve '
+                     'signs and diseases for. This '
+                     'must be '
+                     'a valid '
+                     'animal as returned by '
+                     '/api/data/valid_animals.</p></li>'
+                     '</ul>',
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by'
                            '/api/data/valid_animals. \n \n'})
 class getDiseaseCodes(Resource):
+    """
+    This class is used to create the full_disease_data endpoint which returns the possible diseases for the given
+    animal as well as the corresponding WikiData IDs (if they exist).
+    """
 
     def __init__(self, *args, **kwargs):
         self.gh = getHelper()
         super(getDiseaseCodes, self).__init__(*args, **kwargs)
 
     def get(self, animal):
-        # Handle capitalisation to allow for case insensitivity
-        animal = animal.capitalize()
-        # Check if the animal is valid
-        if animal not in getAnimals().get().get_json():
-            # If the animal is invalid, raise an error
-            raise NotFound(response=f'Invalid animal: {animal}. Please use a valid animal from /api/data/valid_animals.')
-        # Return the data
+        # This is the GET method for the full_disease_data endpoint
+
+        animal = validate_animal(animal)
+        if animal is False:
+            return {'error': 'Invalid animal. Please use a valid animal '
+                             'from /api/data/valid_animals.', 'status': 404}, 404
+
         return jsonify({'disease_codes': self.gh.get_disease_wiki_ids(animal)})
+
+
+def validate_animal(animal):
+    """
+    This function is used to validate the animal parameter in the endpoints, it is a global function as it is used in
+    multiple endpoints and in multiple functions in both the getHelper and diseaseHelper classes.
+    :param animal:
+    :return bool:
+    """
+    animal = animal.capitalize()
+    if animal not in getAnimals().get().get_json():
+        return False
+    else:
+        return animal
 
 
 if __name__ == '__main__':
