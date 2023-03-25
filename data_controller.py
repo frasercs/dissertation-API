@@ -40,7 +40,7 @@ class getRequiredInputData(Resource):
         # This is the GET method for the full_animal_data endpoint which returns the required input data for the
         # diagnose endpoint.
 
-        animal = validate_animal(animal)
+        animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
                              'from /api/data/valid_animals.', 'status': 404}, 404
@@ -76,7 +76,7 @@ class getDiseaseSignMatrix(Resource):
         # developer or specific users permitted in order to update the data on mobile apps which need to perform
         # calculations offline.
 
-        animal = validate_animal(animal)
+        animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
                              'from /api/data/valid_animals.', 'status': 404}, 404
@@ -108,7 +108,7 @@ class getExampleMatrix(Resource):
     def get(animal):
         # This is the GET method for the example_matrix endpoint
 
-        animal = validate_animal(animal)
+        animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
                              'from /api/data/valid_animals.', 'status': 404}, 404
@@ -186,7 +186,7 @@ class getSignCodesAndTerminology(Resource):
     def get(animal):
         # This is the GET method for the full_sign_data endpoint
 
-        animal = validate_animal(animal)
+        animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
                              'from /api/data/valid_animals.', 'status': 404}, 404
@@ -230,22 +230,9 @@ class getDiseaseCodes(Resource):
     def get(animal):
         # This is the GET method for the full_disease_data endpoint
 
-        animal = validate_animal(animal)
+        animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
                              'from /api/data/valid_animals.', 'status': 404}, 404
 
         return jsonify({'disease_codes': dh.get_disease_wiki_ids(animal)})
-
-def validate_animal(animal):
-    """
-    This function is used to validate the animal parameter in the endpoints, it is a global function as it is used in
-    multiple endpoints and in multiple functions in both the getHelper and diseaseHelper classes.
-    :param animal:
-    :return bool:
-    """
-    animal = animal.capitalize()
-    if animal not in getAnimals().get().get_json():
-        return False
-    else:
-        return animal
