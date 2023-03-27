@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 from flask import request, jsonify, Response
 from flask_restx import Namespace, Resource, fields
@@ -12,7 +12,7 @@ import diagnosis_helper as dh
 # load the Excel file
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
 
-api = Namespace('diagnosis', description='Diagnosis related operations')
+api = Namespace('Diagnosis', description='Diagnosis related operations')
 
 diagnosis_payload_model = api.model('Diagnose', {
     'animal': fields.String(required=True, description='The species of animal. As of version 1.0 this can be'
@@ -445,7 +445,7 @@ class diagnose(Resource):
 
     @staticmethod
     @api.expect(diagnosis_payload_model, validate=True)
-    def post() -> Response:
+    def post() -> tuple[dict[str, str | int], int] | Response:
 
         data: [str, Union[str, Dict[str, int], None]] = request.get_json()
         animal: str = data['animal']

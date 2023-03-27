@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 
 import diagnosis_helper as dh
 
-api = Namespace('data', description='Data related operations')
+api = Namespace('Data', description='Data related operations')
 
 # load the Excel file
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
