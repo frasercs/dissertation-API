@@ -9,17 +9,17 @@ from openpyxl import load_workbook
 
 import diagnosis_helper as dh
 
-api = Namespace('Data', description='Data related operations')
+api = Namespace('data', description='Data related operations')
 
 # load the Excel file
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
 
 
-@api.route('/api/data/full_animal_data/<string:animal>')
+@api.route('/full_animal_data/<string:animal>')
 @api.doc(example='Goat', required=True,
          responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'},
          params={'animal': 'The species of animal you wish to retrieve signs and diseases for. This must be a valid '
-                           'animal as returned by /api/data/valid_animals. \n \n'},
+                           'animal as returned by /data/valid_animals. \n \n'},
          description='<h1>Description</h1><p>This endpoint returns a '
                      '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
                      'object containing diagnosable diseases with their corresponding '
@@ -27,7 +27,7 @@ wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
                      'the animal, their full medical terminology in English, and their corresponding '
                      '<a href="https://www.wikidata.org/">WikiData IDs</a> (if they exist).</p>'
                      '<h1>URL Parameters</h1><ul><li><p>animal: The species of animal you wish to retrieve signs and '
-                     'diseases for. This must be a valid animal as returned by /api/data/valid_animals. '
+                     'diseases for. This must be a valid animal as returned by /data/valid_animals. '
                      '</p></li></ul>\n \n ')
 class getRequiredInputData(Resource):
     """
@@ -43,24 +43,24 @@ class getRequiredInputData(Resource):
         animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
-                             'from /api/data/valid_animals.', 'status': 404}, 404
+                             'from /data/valid_animals.', 'status': 404}, 404
 
         return jsonify(
             {'diseases': dh.get_disease_wiki_ids(animal), 'signs': dh.get_sign_names_and_codes(animal)})
 
 
 @api.hide
-@api.route('/api/data/matrix/<string:animal>')
+@api.route('/matrix/<string:animal>')
 @api.doc(example='Goat', required=True,
          responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, params={
         'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
-                  'animal as returned by /api/data/valid_animals. \n \n'},
+                  'animal as returned by /data/valid_animals. \n \n'},
          description='<h1>Description</h1><p>This endpoint returns a '
                      '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
                      'object containing the disease-sign Bayesian matrix for the given animal. This matrix contains '
                      'the likelihoods of each sign being present for each disease.</p><h1>URL Parameters</h1><ul><li>'
                      '<p>animal: The species of animal you wish to retrieve the disease-sign matrix for. '
-                     'This must be a valid animal as returned by /api/data/valid_animals. </p></li></ul>\n \n ')
+                     'This must be a valid animal as returned by /data/valid_animals. </p></li></ul>\n \n ')
 class getDiseaseSignMatrix(Resource):
     """
     This class is used to create the matrix endpoint which returns the disease sign matrix for the given animal. It is
@@ -79,23 +79,23 @@ class getDiseaseSignMatrix(Resource):
         animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
-                             'from /api/data/valid_animals.', 'status': 404}, 404
+                             'from /data/valid_animals.', 'status': 404}, 404
 
         return jsonify(dh.get_likelihood_data(animal))
 
 
-@api.route('/api/data/example_matrix/<string:animal>')
+@api.route('/example_matrix/<string:animal>')
 @api.doc(example='Sheep', required=True,
          responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}, params={
         'animal': 'The species of animal you wish to retrieve the disease sign matrix for. This must be a valid '
-                  'animal as returned by /api/data/valid_animals. \n \n'},
+                  'animal as returned by /data/valid_animals. \n \n'},
          description='<h1>Description</h1><p>This endpoint returns a '
                      '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
                      'object containing an example disease-sign Bayesian matrix for the given animal. '
                      'This matrix contains randomly generated '
                      'likelihoods of each sign being present for each disease.</p><h1>URL Parameters</h1><ul><li>'
                      '<p>animal: The species of animal you wish to retrieve the disease-sign matrix for. '
-                     'This must be a valid animal as returned by /api/data/valid_animals. </p></li></ul>\n \n ')
+                     'This must be a valid animal as returned by /data/valid_animals. </p></li></ul>\n \n ')
 class getExampleMatrix(Resource):
     """
     This class is used to create the example_matrix endpoint which returns a randomly generated disease sign matrix
@@ -111,7 +111,7 @@ class getExampleMatrix(Resource):
         animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
-                             'from /api/data/valid_animals.', 'status': 404}, 404
+                             'from /data/valid_animals.', 'status': 404}, 404
 
         data = dh.get_likelihood_data(animal)
 
@@ -123,7 +123,7 @@ class getExampleMatrix(Resource):
         return jsonify(data)
 
 
-@api.route('/api/data/valid_animals')
+@api.route('/valid_animals')
 @api.doc(responses={200: 'OK', 500: 'Internal Server Error'}, description='<h1>Description</h1>'
                                                                           '<p>This endpoint returns a <a '
                                                                           'href="https://developer.mozilla.org/en-US/docs'
@@ -135,7 +135,7 @@ class getExampleMatrix(Resource):
 class getAnimals(Resource):
     """
     This class is used to create the valid_animals endpoint which returns the names of animals which are available for
-    diagnosis in the /api/diagnose POST method
+    diagnosis in the /diagnosis/diagnose POST method
     """
 
     @staticmethod
@@ -148,7 +148,7 @@ class getAnimals(Resource):
         return jsonify([name for name in wb.sheetnames if "_Abbr" not in name and "_Codes" not in name])
 
 
-@api.route('/api/data/full_sign_data/<string:animal>')
+@api.route('/full_sign_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'},
          description='<h1>Description</h1>'
                      '<p>This endpoint returns a <a '
@@ -171,10 +171,10 @@ class getAnimals(Resource):
                      'must be '
                      'a valid '
                      'animal as returned by '
-                     '/api/data/valid_animals.</p></li>'
+                     '/data/valid_animals.</p></li>'
                      '</ul>',
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
-                           'returned by /api/data/valid_animals. \n \n '})
+                           'returned by /data/valid_animals. \n \n '})
 class getSignCodesAndTerminology(Resource):
     """
     This class is used to create the full_sign_data endpoint which returns the full medical terminology for each sign
@@ -189,12 +189,12 @@ class getSignCodesAndTerminology(Resource):
         animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
-                             'from /api/data/valid_animals.', 'status': 404}, 404
+                             'from /data/valid_animals.', 'status': 404}, 404
 
         return jsonify({'full_sign_data': dh.get_sign_names_and_codes(animal)})
 
 
-@api.route('/api/data/full_disease_data/<string:animal>')
+@api.route('/full_disease_data/<string:animal>')
 @api.doc(required=True, responses={200: 'OK', 400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'},
          description='<h1>Description</h1>'
                      '<p>This endpoint returns a <a '
@@ -215,11 +215,11 @@ class getSignCodesAndTerminology(Resource):
                      'must be '
                      'a valid '
                      'animal as returned by '
-                     '/api/data/valid_animals.</p></li>'
+                     '/data/valid_animals.</p></li>'
                      '</ul>',
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by'
-                           '/api/data/valid_animals. \n \n'})
+                           '/data/valid_animals. \n \n'})
 class getDiseaseCodes(Resource):
     """
     This class is used to create the full_disease_data endpoint which returns the possible diseases for the given
@@ -233,6 +233,6 @@ class getDiseaseCodes(Resource):
         animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
-                             'from /api/data/valid_animals.', 'status': 404}, 404
+                             'from /data/valid_animals.', 'status': 404}, 404
 
         return jsonify({'disease_codes': dh.get_disease_wiki_ids(animal)})

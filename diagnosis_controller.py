@@ -12,7 +12,7 @@ import diagnosis_helper as dh
 # load the Excel file
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
 
-api = Namespace('Diagnosis', description='Diagnosis related operations')
+api = Namespace('diagnosis', description='Diagnosis related operations')
 
 diagnosis_payload_model = api.model('Diagnose', {
     'animal': fields.String(required=True, description='The species of animal. As of version 1.0 this can be'
@@ -121,7 +121,7 @@ custom_diagnosis_payload_model = api.model('Custom Diagnosis Payload', {
     'animal': fields.String(required=False, description='The animal to be diagnosed', example='Dog')})
 
 
-@api.route('/api/diagnose/', methods=['POST'])
+@api.route('/diagnose/', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Bad Request', 500: 'Internal Server Error'},
          description='<h1>Description</h1><p>This endpoint takes a <a href="https://developer.mozilla.org/'
                      'en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> object containing the species of animal and '
@@ -130,9 +130,9 @@ custom_diagnosis_payload_model = api.model('Custom Diagnosis Payload', {
                      '<p>The <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a'
                      '> object must contain both "animal" and "signs" and can optionally contain '
                      '"priors" and "likelihoods"</p> \n \n<h1> Parameters</h1><p>animal:  You can use the'
-                     '/api/data/valid_animals GET method to find out which animals are available for '
+                     '/data/valid_animals GET method to find out which animals are available for '
                      'diagnosis.</p>\n \n<p>signs: \'All signs detailed in the GET method '
-                     '/api/data/full_sign_data/\'animal\' must be included. The data must be formatted as a '
+                     '/data/full_sign_data/\'animal\' must be included. The data must be formatted as a '
                      '<a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
                      'object,the key must be a string and the value of each sign must be 1 0, or -1. '
                      '1 means the sign is '
@@ -141,15 +141,15 @@ custom_diagnosis_payload_model = api.model('Custom Diagnosis Payload', {
                      'in the payload.It is used to alter the prior likelihoods of diseases occurring which influences '
                      'the outcome of the Bayes algorithm. If this is not included, the algorithm assumes equal prior '
                      'likelihoods. The list of diseases and their prior likelihoods must add up to 100.Data for the '
-                     'required parameters can be returned by the GET Method at /api/data/full_disease_data/\'animal\' '
+                     'required parameters can be returned by the GET Method at /data/full_disease_data/\'animal\' '
                      'which returns each disease as the key and the corresponding <a href="https://www.wikidata.org/">'
                      'WikiData ID</a> as the value. </p>\n \nlikelihoods: This is an optional parameter which does not '
                      'need to be passed in the payload. It is used to alter the likelihoods of signs being present for '
                      'each disease. If this is not included, the algorithm assumes equal likelihoods. The list of '
                      'diseases and their likelihoods must only contain values between 0 and 1, non-inclusive. Data '
-                     'for the required parameters can be returned by the GET Method at /api/data/matrix/\'animal\' '
+                     'for the required parameters can be returned by the GET Method at /data/matrix/\'animal\' '
                      'which returns the default matrix the Bayesian algorithm uses. Alternatively the required signs '
-                     'and diseases can be obtained via the /api/data/full_animal_data/\'animal\' endpoint.</p> \n \n'
+                     'and diseases can be obtained via the /data/full_animal_data/\'animal\' endpoint.</p> \n \n'
                      '<p>WARNING: Providing your own likelihoods and priors can result in the algorithm returning '
                      'incorrect results. Use these features with caution if the values you provide are not based on '
                      'research. </p> <p>NOTE: likelihood values in the example payload are randomly generated '
@@ -453,7 +453,7 @@ class diagnose(Resource):
         animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
-                             'from /api/data/valid_animals.', 'status': 404}, 404
+                             'from /data/valid_animals.', 'status': 404}, 404
 
         valid_signs: List[str] = dh.get_signs(animal)
         diseases: List[str] = dh.get_diseases(animal)
@@ -469,7 +469,7 @@ class diagnose(Resource):
         shown_signs: Dict[str, int] = data['signs']
         if set(shown_signs.keys()) != set(valid_signs):
             raise BadRequest(f'Invalid signs: {list(set(shown_signs.keys()) - set(valid_signs))}. '
-                             f'Please use valid sign from /api/data/valid_signs/{animal}.')
+                             f'Please use valid sign from /data/valid_signs/{animal}.')
 
         valid_sign_values = [0, 1, -1]
         for x, value in enumerate(shown_signs.values()):
@@ -490,7 +490,7 @@ class diagnose(Resource):
         return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
 
-@api.route('/api/custom_diagnose', methods=['POST'])
+@api.route('/custom_diagnose', methods=['POST'])
 @api.doc(responses={200: 'OK', 400: 'Bad Request', 500: 'Internal Server Error'},
          description='<h1>Description</h1><p>This endpoint takes a <a '
                      'href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/JSON">JSON</a> '
