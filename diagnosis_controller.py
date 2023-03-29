@@ -1,6 +1,5 @@
 import os
 import sys
-from typing import Dict, List, Union, Tuple
 
 from flask import request, jsonify, Response
 from flask_restx import Namespace, Resource, fields
@@ -463,7 +462,7 @@ class diagnose(Resource):
         if data.get('likelihoods') is not None:
             likelihoods = dh.validate_likelihoods(data['likelihoods'], diseases, valid_signs)
         else:
-            likelihoods: Dict[str, Dict[str, float]] = dh.get_likelihood_data(animal)
+            likelihoods = dh.get_likelihood_data(animal)
 
         # Get the signs from the API request data
         shown_signs = data['signs']
