@@ -12,7 +12,6 @@ from werkzeug.exceptions import BadRequest
 wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
 
 
-@staticmethod
 def validate_priors(priors, diseases):
     """
     A function used to validate the priors provided by the user
@@ -38,7 +37,6 @@ def validate_priors(priors, diseases):
     return priors
 
 
-@staticmethod
 def validate_likelihoods(likelihoods, diseases, signs):
     """
     A function used to validate the likelihoods provided by the user
@@ -82,7 +80,6 @@ def validate_likelihoods(likelihoods, diseases, signs):
     return likelihoods
 
 
-@staticmethod
 def calculate_results(diseases, likelihoods, shown_signs, priors):
     """
     A function used to calculate the results of the Bayes Theorem
@@ -108,7 +105,7 @@ def calculate_results(diseases, likelihoods, shown_signs, priors):
     return results
 
 
-@staticmethod
+
 def normalise(results):
     """
     A function used to normalise the results of the Bayes Theorem calculations
@@ -125,7 +122,7 @@ def normalise(results):
     return normalised_results
 
 
-@staticmethod
+
 def get_default_priors(diseases):
     """
     A function used to generate equal priors if the user does not provide any
@@ -138,7 +135,6 @@ def get_default_priors(diseases):
     return priors
 
 
-@staticmethod
 def get_disease_wiki_ids(animal):
     """
     A function used to get the WikiData IDs for the diseases
@@ -189,7 +185,6 @@ def get_likelihood_data(animal):
     return likelihoods
 
 
-@staticmethod
 def get_diseases(animal):
     """
     A function used to get the diseases from the Excel workbook
@@ -206,7 +201,6 @@ def get_diseases(animal):
     return diseases
 
 
-@staticmethod
 def get_signs(animal):
     """
     A function used to get the signs from the Excel workbook
@@ -223,7 +217,6 @@ def get_signs(animal):
     return signs
 
 
-@staticmethod
 def get_sign_names_and_codes(animal):
     """
     Get the full name and Wikidata code for each sign
