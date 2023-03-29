@@ -439,25 +439,25 @@ custom_diagnosis_payload_model = api.model('Custom Diagnosis Payload', {
 class diagnose(Resource):
 
     @staticmethod
-    def options() -> Response:
+    def options():
         # This is required to allow the OPTIONS method to be used for CORS
         return jsonify({'status': 'ok'})
 
     @staticmethod
     @api.expect(diagnosis_payload_model, validate=True)
-    def post() -> tuple[dict[str, str | int], int] | Response:
+    def post():
 
-        data: [str, Union[str, Dict[str, int], None]] = request.get_json()
-        animal: str = data['animal']
+        data = request.get_json()
+        animal = data['animal']
 
         animal = dh.validate_animal(animal)
         if animal is False:
             return {'error': 'Invalid animal. Please use a valid animal '
                              'from /data/valid_animals.', 'status': 404}, 404
 
-        valid_signs: List[str] = dh.get_signs(animal)
-        diseases: List[str] = dh.get_diseases(animal)
-        wiki_ids: Dict[str, str] = dh.get_disease_wiki_ids(animal)
+        valid_signs = dh.get_signs(animal)
+        diseases = dh.get_diseases(animal)
+        wiki_ids = dh.get_disease_wiki_ids(animal)
 
         # Check if the likelihoods are included in the API request data
         if data.get('likelihoods') is not None:
@@ -466,7 +466,7 @@ class diagnose(Resource):
             likelihoods: Dict[str, Dict[str, float]] = dh.get_likelihood_data(animal)
 
         # Get the signs from the API request data
-        shown_signs: Dict[str, int] = data['signs']
+        shown_signs = data['signs']
         if set(shown_signs.keys()) != set(valid_signs):
             raise BadRequest(f'Invalid signs: {list(set(shown_signs.keys()) - set(valid_signs))}. '
                              f'Please use valid sign from /data/valid_signs/{animal}.')
@@ -484,8 +484,8 @@ class diagnose(Resource):
             priors = dh.get_default_priors(diseases)
 
         # Perform calculations and normalisation
-        results: Dict[str, float] = dh.calculate_results(diseases, likelihoods, shown_signs, priors)
-        normalised_results: Dict[str, float] = dh.normalise(results)
+        results = dh.calculate_results(diseases, likelihoods, shown_signs, priors)
+        normalised_results = dh.normalise(results)
 
         return jsonify({'results': normalised_results, 'wiki_ids': wiki_ids})
 
@@ -549,12 +549,12 @@ class custom_diagnose(Resource):
         # This is the POST method for the custom_diagnose endpoint which allows the user to input their own data,
         # meaning the API can be used in a larger number of contexts.
 
-        data: [str, Union[str, Dict[str, int], None]] = request.get_json()
-        shown_signs: Dict[str, int] = data.get('shown_signs')
-        likelihoods: Dict[str, Dict[str, float]] = data.get('likelihoods')
-        diseases: List[str] = data.get('diseases')
-        priors: Dict[str, float] = data.get('priors')
-        sign_list: List[str] = data.get('signs')
+        data = request.get_json()
+        shown_signs = data.get('shown_signs')
+        likelihoods = data.get('likelihoods')
+        diseases = data.get('diseases')
+        priors = data.get('priors')
+        sign_list = data.get('signs')
 
         valid_sign_values = [0, 1, -1]
         # Check if the signs values are all valid
@@ -572,7 +572,7 @@ class custom_diagnose(Resource):
         else:
             priors = dh.get_default_priors(diseases)
 
-        results: Dict[str, float] = dh.calculate_results(diseases, likelihoods, shown_signs, priors)
-        normalised_results: Dict[str, float] = dh.normalise(results)
+        results = dh.calculate_results(diseases, likelihoods, shown_signs, priors)
+        normalised_results = dh.normalise(results)
 
         return jsonify({'results': normalised_results})
