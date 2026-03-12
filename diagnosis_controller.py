@@ -1,15 +1,8 @@
-import os
-import sys
-
-from flask import request, jsonify, Response
+from flask import request, jsonify
 from flask_restx import Namespace, Resource, fields
-from openpyxl import load_workbook
 from werkzeug.exceptions import BadRequest
 
 import diagnosis_helper as dh
-
-# load the Excel file
-wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
 
 api = Namespace('diagnosis', description='Diagnosis related operations')
 
@@ -435,12 +428,7 @@ custom_diagnosis_payload_model = api.model('Custom Diagnosis Payload', {
                      '      "Wght_L": 0.0943'
                      '    }'
                      ' }\n \t }\n } ')
-class diagnose(Resource):
-
-    @staticmethod
-    def options():
-        # This is required to allow the OPTIONS method to be used for CORS
-        return jsonify({'status': 'ok'})
+class Diagnose(Resource):
 
     @staticmethod
     @api.expect(diagnosis_payload_model, validate=True)
@@ -470,10 +458,8 @@ class diagnose(Resource):
             raise BadRequest(f'Invalid signs: {list(set(shown_signs.keys()) - set(valid_signs))}. '
                              f'Please use valid sign from /data/valid_signs/{animal}.')
 
-        valid_sign_values = [0, 1, -1]
-        for x, value in enumerate(shown_signs.values()):
-            if value not in valid_sign_values:
-                sign = list(shown_signs.keys())[x]
+        for sign, value in shown_signs.items():
+            if value not in (0, 1, -1):
                 raise BadRequest(f'Error with value of {sign}: {value}. Sign values must be either -1, 0 or 1')
 
         # Check if the priors are included in the API request data
@@ -532,15 +518,10 @@ class diagnose(Resource):
                      '"likelihoods": {"Rabies": {"Fever": 0.6, "Cough": 0.1, "Diarrhoea": 0.1},"Cold": '
                      '{"Fever": 0.9,"Cough": 0.9,"Diarrhoea": 0.1}},\n '
                      '"priors": {"Rabies": 20,"Cold": 80 },\n "animal": "Dog" \n}')
-class custom_diagnose(Resource):
+class CustomDiagnose(Resource):
     """
     This class is used to create the custom_diagnose endpoint.
     """
-
-    @staticmethod
-    def options() -> Response:
-        # This is required to allow the OPTIONS method to be used for CORS
-        return jsonify({'status': 'ok'})
 
     @staticmethod
     @api.expect(custom_diagnosis_payload_model, validate=True)
@@ -555,11 +536,9 @@ class custom_diagnose(Resource):
         priors = data.get('priors')
         sign_list = data.get('signs')
 
-        valid_sign_values = [0, 1, -1]
         # Check if the signs values are all valid
-        for x, value in enumerate(shown_signs.values()):
-            if value not in valid_sign_values:
-                sign = list(shown_signs.keys())[x]
+        for sign, value in shown_signs.items():
+            if value not in (0, 1, -1):
                 raise BadRequest(f'Error with value of {sign}: {value}. Sign values must be either -1, 0 or 1')
 
         # Check to make sure the likelihoods are valid

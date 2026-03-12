@@ -68,18 +68,19 @@ class TestValidateLikelihoods(unittest.TestCase):
                          "400 Bad Request: Missing 'disease3' in likelihoods. Please provide a "
                          "likelihood value for all diseases.")
 
-    def test_invalid_sign(self):
+    def test_invalid_sign_key(self):
         likelihoods = {'disease1': {'sign1': 0.3, 'sign2': 0.4, 'sign3': 0.2, 'sign4': 0.1},
-            'disease2': {'sign1': 0.1, 'sign2': 0.2, 'sign3': 1.3, 'sign4': 0.4},
+            'disease2': {'sign1': 0.1, 'sign2': 0.2, 'sign3': 0.3, 'sign4': 0.4},
                        'disease3': {'sign1': 0.2, 'sign2': 0.3, 'sign3': 0.2, 'sign5': 0.3}}
         diseases = ['disease1', 'disease2', 'disease3']
         signs = ['sign1', 'sign2', 'sign3', 'sign4']
         with self.assertRaises(BadRequest) as cm:
             validate_likelihoods(likelihoods, diseases, signs)
         self.assertEqual(str(cm.exception),
-                         "400 Bad Request: Sign 'sign3' in 'likelihoods' for disease 'disease2' is not a valid sign.")
+                         "400 Bad Request: Sign 'sign5' in disease3 within 'likelihoods' is not a valid sign. "
+                         "Please use a valid signs from ['sign1', 'sign2', 'sign3', 'sign4'].")
 
-    def test_invalid_sign(self):
+    def test_invalid_sign_value(self):
         likelihoods = {'disease1': {'sign1': 0.3, 'sign2': 0.4, 'sign3': 0.2, 'sign4': 0.1},
             'disease2': {'sign1': 0.1, 'sign2': 0.2, 'sign3': 1.3, 'sign4': 0.4},
             'disease3': {'sign1': 0.2, 'sign2': 0.3, 'sign3': 0.2, 'sign4': 0.3}}

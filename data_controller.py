@@ -1,18 +1,12 @@
-import os
+import copy
 import random
-import sys
 
 from flask import jsonify
 from flask_restx import Namespace, Resource
-from openpyxl import load_workbook
-
 
 import diagnosis_helper as dh
 
 api = Namespace('data', description='Data related operations')
-
-# load the Excel file
-wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
 
 
 @api.route('/full_animal_data/<string:animal>')
@@ -29,7 +23,7 @@ wb = load_workbook(filename=os.path.join(sys.path[0], "data.xlsx"))
                      '<h1>URL Parameters</h1><ul><li><p>animal: The species of animal you wish to retrieve signs and '
                      'diseases for. This must be a valid animal as returned by /data/valid_animals. '
                      '</p></li></ul>\n \n ')
-class getRequiredInputData(Resource):
+class GetRequiredInputData(Resource):
     """
     This class is used to create the full_animal_data endpoint which returns the required input data for the
     diagnose endpoint.
@@ -61,7 +55,7 @@ class getRequiredInputData(Resource):
                      'the likelihoods of each sign being present for each disease.</p><h1>URL Parameters</h1><ul><li>'
                      '<p>animal: The species of animal you wish to retrieve the disease-sign matrix for. '
                      'This must be a valid animal as returned by /data/valid_animals. </p></li></ul>\n \n ')
-class getDiseaseSignMatrix(Resource):
+class GetDiseaseSignMatrix(Resource):
     """
     This class is used to create the matrix endpoint which returns the disease sign matrix for the given animal. It is
     hidden from the Swagger UI as it is not intended to be used by the user, it is only to be used by the developer
@@ -96,7 +90,7 @@ class getDiseaseSignMatrix(Resource):
                      'likelihoods of each sign being present for each disease.</p><h1>URL Parameters</h1><ul><li>'
                      '<p>animal: The species of animal you wish to retrieve the disease-sign matrix for. '
                      'This must be a valid animal as returned by /data/valid_animals. </p></li></ul>\n \n ')
-class getExampleMatrix(Resource):
+class GetExampleMatrix(Resource):
     """
     This class is used to create the example_matrix endpoint which returns a randomly generated disease sign matrix
     for the given animal. It is used for documentation and giving context to users of the API as the data used in
@@ -113,7 +107,7 @@ class getExampleMatrix(Resource):
             return {'error': 'Invalid animal. Please use a valid animal '
                              'from /data/valid_animals.', 'status': 404}, 404
 
-        data = dh.get_likelihood_data(animal)
+        data = copy.deepcopy(dh.get_likelihood_data(animal))
 
         # Replace correct data with random data
         for disease in data:
@@ -132,7 +126,7 @@ class getExampleMatrix(Resource):
                                                                           'names of animal species which are available for '
                                                                           'diagnosis in the /api/diagnose POST method '
                                                                           'below. </p>\n')
-class getAnimals(Resource):
+class GetAnimals(Resource):
     """
     This class is used to create the valid_animals endpoint which returns the names of animals which are available for
     diagnosis in the /diagnosis/diagnose POST method
@@ -145,7 +139,7 @@ class getAnimals(Resource):
         # Return the names by getting every worksheet with doesn't contain _Abbr or _Codes
         # I'm using list comprehension as it is cleaner than a for loop, but syntacitically slightly more advanced
 
-        return jsonify([name for name in wb.sheetnames if "_Abbr" not in name and "_Codes" not in name])
+        return jsonify(dh.get_animals())
 
 
 @api.route('/full_sign_data/<string:animal>')
@@ -175,7 +169,7 @@ class getAnimals(Resource):
                      '</ul>',
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by /data/valid_animals. \n \n '})
-class getSignCodesAndTerminology(Resource):
+class GetSignCodesAndTerminology(Resource):
     """
     This class is used to create the full_sign_data endpoint which returns the full medical terminology for each sign
     in English as well as the corresponding WikiData IDs for the signs (if they exist).
@@ -220,7 +214,7 @@ class getSignCodesAndTerminology(Resource):
          params={'animal': 'The species of animal you wish to retrieve the data for. This must be a valid animal as '
                            'returned by'
                            '/data/valid_animals. \n \n'})
-class getDiseaseCodes(Resource):
+class GetDiseaseCodes(Resource):
     """
     This class is used to create the full_disease_data endpoint which returns the possible diseases for the given
     animal as well as the corresponding WikiData IDs (if they exist).

@@ -5,6 +5,7 @@ This file contains the code for the Flask API. It is used to diagnose animals us
 """
 
 from flask import Flask
+from flask_compress import Compress
 from flask_cors import CORS
 from flask_restx import Api
 
@@ -23,7 +24,7 @@ api = Api(version='1.0', title='Diagnosis API', description='A simple API to dia
           default='Diagnosis API', default_label='Diagnosis API')
 # init the flask app
 app = Flask(__name__)
-# fix the cors issue
+Compress(app)
 CORS(app)
 # init the api using factory pattern
 api.init_app(app)
